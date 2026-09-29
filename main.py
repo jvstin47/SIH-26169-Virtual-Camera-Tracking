@@ -344,13 +344,27 @@ class PhoenixXSimulator:
         print("=" * 70 + "\n")
 
 def main():
-    parser = argparse.ArgumentParser(description="Phoenix-X FSOC Virtual Camera Tracker")
+    parser = argparse.ArgumentParser(description="Phoenix-X FSOC Virtual Camera Tracker (SIH 26169)")
     parser.add_argument("--headless", action="store_true", help="Run without GUI window for automated testing")
-    parser.add_argument("--duration", type=float, default=None, help="Run for specific duration in seconds")
+    parser.add_argument("--duration", type=float, default=None, help="Run simulation for specific duration in seconds")
+    parser.add_argument("--video", type=str, default=None, help="Path to external .mp4 video file (ISRO Benchmark-2 mode)")
+    parser.add_argument("--select-roi", action="store_true", help="Click and drag to select any arbitrary object to track in video")
+    parser.add_argument("--ground-truth", type=str, default=None, help="Path to ground truth CSV coordinates for verification")
     args = parser.parse_args()
     
-    sim = PhoenixXSimulator(headless=args.headless)
-    sim.run(max_seconds=args.duration)
+    if args.video:
+        # Launch ISRO Benchmark-2 Decoupled Video Processor
+        from src.benchmarking.mp4_bypass import VideoBenchmarkRunner
+        runner = VideoBenchmarkRunner(
+            video_path=args.video,
+            select_roi=args.select_roi,
+            ground_truth_path=args.ground_truth
+        )
+        runner.run()
+    else:
+        # Launch Closed-Loop Interactive Simulator
+        sim = PhoenixXSimulator(headless=args.headless)
+        sim.run(max_seconds=args.duration)
 
 if __name__ == "__main__":
     main()

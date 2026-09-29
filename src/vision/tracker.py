@@ -38,6 +38,25 @@ class BeaconTracker:
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(foreground)
         peak_x, peak_y = max_loc
         
+        # Kinematic Validation Gate: If we had a verified track, check for impossible teleports (> 60 px/frame)
+        if self.last_detected_pos is not None:
+            jump_dist = math.hypot(peak_x - self.last_detected_pos.x, peak_y - self.last_detected_pos.y)
+            if jump_dist > 65.0:
+                # Localized search around previous position to avoid distant noise clusters
+                prev_x = int(round(self.last_detected_pos.x))
+                prev_y = int(round(self.last_detected_pos.y))
+                h, w = raw_frame.shape
+                gate_r = 45
+                gy_min, gy_max = max(0, prev_y - gate_r), min(h, prev_y + gate_r + 1)
+                gx_min, gx_max = max(0, prev_x - gate_r), min(w, prev_x + gate_r + 1)
+                
+                local_gate = foreground[gy_min:gy_max, gx_min:gx_max]
+                _, l_max_val, _, l_max_loc = cv2.minMaxLoc(local_gate)
+                if l_max_val > 15.0:
+                    peak_x = gx_min + l_max_loc[0]
+                    peak_y = gy_min + l_max_loc[1]
+                    max_val = l_max_val
+        
         # Signal-to-Noise Ratio (SNR) calculation
         noise_std = float(np.std(foreground)) + 1e-5
         snr_linear = max_val / noise_std
