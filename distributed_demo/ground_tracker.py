@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 Node B: Autonomous Ground Optical Tracking Station (Terminal 2)
-Listens on UDP port 9999 for incoming noisy video frames from Node A.
-Runs AI Denoising, Sub-Pixel Centroiding, and Kalman-PID Gimbal Servoing.
-Serves real-time telemetry to the browser at http://localhost:8080.
+Closed-loop PTZ tracking station with both Autonomous & Manual Operator PTZ controls.
+Sends real-time gimbal pointing coordinates back to Node A (UDP 9998).
+Serves interactive mission control dashboard at http://localhost:8080/live.html.
 """
 
 import sys
@@ -14,48 +14,95 @@ import socket
 import json
 import threading
 import http.server
+import urllib.parse
 import numpy as np
 import cv2
 
 # Add workspace to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.core.coordinates import CAMERA_WIDTH_PX, CAMERA_HEIGHT_PX, ARCSEC_PER_PIXEL
+from src.core.coordinates import (
+    CAMERA_WIDTH_PX, CAMERA_HEIGHT_PX, UNIVERSE_WIDTH_PX, UNIVERSE_HEIGHT_PX,
+    ARCSEC_PER_PIXEL, DEFAULT_MAX_SLEW_RATE_DEG_S, DEG_PER_PIXEL
+)
 from src.vision.tracker import BeaconTracker
 from src.control.gimbal_controller import GimbalController
 
-# Shared global telemetry for web cockpit
+# Shared global state for gimbal and telemetry
+GIMBAL_STATE = {
+    "cam_x": UNIVERSE_WIDTH_PX / 2.0,
+    "cam_y": UNIVERSE_HEIGHT_PX / 2.0,
+    "auto_track": True,
+    "manual_vx": 0.0,
+    "manual_vy": 0.0
+}
+
 LATEST_TELEMETRY = {
     "frame_id": 0,
     "timestamp": 0.0,
     "centroid_x": 320.0,
     "centroid_y": 240.0,
+    "cam_x": 1000.0,
+    "cam_y": 1000.0,
     "error_px": 0.0,
     "error_arcsec": 0.0,
     "slew_rate_deg_s": 0.0,
     "fps": 30.0,
     "locked": True,
+    "auto_track": True,
     "true_x": 320.0,
     "true_y": 240.0
 }
 
 class TelemetryServer(http.server.SimpleHTTPRequestHandler):
-    """Serves real-time JSON telemetry and static files to browser."""
+    """Serves real-time telemetry and receives PTZ commands from the web UI."""
     def do_GET(self):
-        if self.path == "/telemetry":
+        parsed = urllib.parse.urlparse(self.path)
+        
+        if parsed.path == "/telemetry":
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(json.dumps(LATEST_TELEMETRY).encode('utf-8'))
+            
+        elif parsed.path == "/ptz":
+            query = urllib.parse.parse_qs(parsed.query)
+            cmd = query.get("cmd", [""])[0]
+            step_px = 35.0
+            
+            if cmd == "pan_left":
+                GIMBAL_STATE["auto_track"] = False
+                GIMBAL_STATE["cam_x"] -= step_px
+            elif cmd == "pan_right":
+                GIMBAL_STATE["auto_track"] = False
+                GIMBAL_STATE["cam_x"] += step_px
+            elif cmd == "tilt_up":
+                GIMBAL_STATE["auto_track"] = False
+                GIMBAL_STATE["cam_y"] -= step_px
+            elif cmd == "tilt_down":
+                GIMBAL_STATE["auto_track"] = False
+                GIMBAL_STATE["cam_y"] += step_px
+            elif cmd == "toggle_auto":
+                GIMBAL_STATE["auto_track"] = not GIMBAL_STATE["auto_track"]
+            elif cmd == "recenter":
+                GIMBAL_STATE["cam_x"] = UNIVERSE_WIDTH_PX / 2.0
+                GIMBAL_STATE["cam_y"] = UNIVERSE_HEIGHT_PX / 2.0
+                GIMBAL_STATE["auto_track"] = True
+                
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(b'{"status": "ok"}')
+            
         else:
-            # Serve web demo directory
             web_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web_demo")
             self.directory = web_dir
             super().do_GET()
 
     def log_message(self, format, *args):
-        pass # Suppress HTTP logs in terminal
+        pass
 
 def start_http_server():
     server = http.server.HTTPServer(("127.0.0.1", 8080), TelemetryServer)
@@ -63,19 +110,31 @@ def start_http_server():
 
 def main():
     print("=" * 70)
-    print("  NODE B: AUTONOMOUS GROUND OPTICAL TRACKING TERMINAL (TERMINAL 2)")
+    print("  NODE B: GROUND OPTICAL TRACKING TERMINAL WITH PTZ CONTROL (TERMINAL 2)")
     print("=" * 70)
-    print("[*] Binding UDP listener on 127.0.0.1:9999...")
-    
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(("127.0.0.1", 9999))
-    sock.settimeout(2.0)
+    print("[*] Listening on UDP 127.0.0.1:9999...")
+    print("[*] Transmitting PTZ feedback to Node A on 127.0.0.1:9998...")
+    print("[+] Live Mission Control Dashboard active at: http://localhost:8080/live.html")
+    print("\nOperator PTZ Controls:")
+    print("  [W / Up]    Tilt Up")
+    print("  [S / Down]  Tilt Down")
+    print("  [A / Left]  Pan Left")
+    print("  [D / Right] Pan Right")
+    print("  [M / Space] Toggle Autonomous Auto-Track vs Manual Operator Override")
+    print("  [R]         Re-Center Camera to Global Origin")
+    print("  [Q]         Quit Node B\n")
 
-    # Start telemetry HTTP server in background thread
+    # Start HTTP Telemetry Server
     http_thread = threading.Thread(target=start_http_server, daemon=True)
     http_thread.start()
-    print("[+] Live Mission Control Dashboard active at: http://localhost:8080/live.html")
-    print("[*] Waiting for optical beacon feed from Node A (target_satellite.py)...\n")
+
+    # UDP Sockets
+    sock_rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock_rx.bind(("127.0.0.1", 9999))
+    sock_rx.settimeout(2.0)
+
+    sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    node_a_addr = ("127.0.0.1", 9998)
 
     tracker = BeaconTracker()
     controller = GimbalController()
@@ -85,22 +144,23 @@ def main():
     last_t = time.time()
     measured_fps = 30.0
 
+    max_slew_deg_s = DEFAULT_MAX_SLEW_RATE_DEG_S
+    max_slew_px_s = max_slew_deg_s / DEG_PER_PIXEL
+
     while True:
         try:
-            data, _ = sock.recvfrom(65535)
+            data, _ = sock_rx.recvfrom(65535)
         except socket.timeout:
             continue
 
         if data == b"STOP":
-            print("[*] Received STOP packet from Node A.")
+            print("[*] Node A signaled shutdown.")
             break
 
-        # Parse packet: 4 bytes meta length + JSON + JPEG bytes
         meta_len = int.from_bytes(data[:4], 'big')
         meta_json = json.loads(data[4:4 + meta_len].decode('utf-8'))
         jpg_bytes = data[4 + meta_len:]
 
-        # Decode JPEG frame
         nparr = np.frombuffer(jpg_bytes, np.uint8)
         frame = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
         if frame is None:
@@ -110,43 +170,88 @@ def main():
         now = time.time()
         dt = max(0.001, now - last_t)
         last_t = now
-        
+
         if frame_count % 15 == 0:
             measured_fps = 15.0 / (now - (t_start + (frame_count - 15) * 0.033))
 
         # -----------------------------------------------------------------
-        # Real-Time Perception & Tracking Core
+        # Vision Detection & Sub-Pixel Centroiding
         # -----------------------------------------------------------------
         detected_pos, error_px, snr_db = tracker.process_frame(frame)
         error_arcsec = error_px * ARCSEC_PER_PIXEL if detected_pos else 999.0
 
-        # Gimbal servo control update
-        cmd_vx, cmd_vy = controller.update(detected_pos, dt)
-        slew_rate = math.hypot(cmd_vx, cmd_vy) * 0.00625  # deg/s
+        # -----------------------------------------------------------------
+        # PTZ Slew & Gimbal Motion Control
+        # -----------------------------------------------------------------
+        cmd_vx = 0.0
+        cmd_vy = 0.0
 
-        # Update global telemetry dictionary
+        if GIMBAL_STATE["auto_track"]:
+            # Autonomous AI Tracking Mode (PID + Kalman Feedforward)
+            cmd_vx, cmd_vy = controller.update(detected_pos, dt)
+        else:
+            # Manual Operator Override Mode
+            cmd_vx = GIMBAL_STATE["manual_vx"]
+            cmd_vy = GIMBAL_STATE["manual_vy"]
+
+        # Enforce statutory slew rate limit (5.0 deg/s)
+        speed = math.hypot(cmd_vx, cmd_vy)
+        if speed > max_slew_px_s:
+            scale = max_slew_px_s / speed
+            cmd_vx *= scale
+            cmd_vy *= scale
+
+        # Move PTZ camera
+        GIMBAL_STATE["cam_x"] += cmd_vx * dt
+        GIMBAL_STATE["cam_y"] += cmd_vy * dt
+
+        # Universe boundaries
+        half_w = CAMERA_WIDTH_PX / 2.0
+        half_h = CAMERA_HEIGHT_PX / 2.0
+        GIMBAL_STATE["cam_x"] = float(np.clip(GIMBAL_STATE["cam_x"], half_w, UNIVERSE_WIDTH_PX - half_w))
+        GIMBAL_STATE["cam_y"] = float(np.clip(GIMBAL_STATE["cam_y"], half_h, UNIVERSE_HEIGHT_PX - half_h))
+
+        slew_rate = (math.hypot(cmd_vx, cmd_vy) * DEG_PER_PIXEL)
+
+        # -----------------------------------------------------------------
+        # Closed-Loop Feedback to Node A (Sends updated camera center)
+        # -----------------------------------------------------------------
+        fb_msg = json.dumps({
+            "cam_x": GIMBAL_STATE["cam_x"],
+            "cam_y": GIMBAL_STATE["cam_y"]
+        }).encode('utf-8')
+        try:
+            sock_tx.sendto(fb_msg, node_a_addr)
+        except Exception:
+            pass
+
+        # Update telemetry object
         LATEST_TELEMETRY["frame_id"] = meta_json["frame_id"]
         LATEST_TELEMETRY["timestamp"] = meta_json["timestamp"]
         LATEST_TELEMETRY["centroid_x"] = detected_pos.x if detected_pos else 320.0
         LATEST_TELEMETRY["centroid_y"] = detected_pos.y if detected_pos else 240.0
+        LATEST_TELEMETRY["cam_x"] = GIMBAL_STATE["cam_x"]
+        LATEST_TELEMETRY["cam_y"] = GIMBAL_STATE["cam_y"]
         LATEST_TELEMETRY["error_px"] = float(error_px)
         LATEST_TELEMETRY["error_arcsec"] = float(error_arcsec)
         LATEST_TELEMETRY["slew_rate_deg_s"] = float(slew_rate)
         LATEST_TELEMETRY["fps"] = float(measured_fps)
         LATEST_TELEMETRY["locked"] = bool(detected_pos and error_px <= 10.0)
+        LATEST_TELEMETRY["auto_track"] = GIMBAL_STATE["auto_track"]
         LATEST_TELEMETRY["true_x"] = float(meta_json["apparent_local_x"])
         LATEST_TELEMETRY["true_y"] = float(meta_json["apparent_local_y"])
 
-        # Visual Cockpit HUD Rendering
+        # -----------------------------------------------------------------
+        # Terminal 2 Visual Cockpit Window
+        # -----------------------------------------------------------------
         bgr = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
         cx, cy = int(CAMERA_WIDTH_PX / 2), int(CAMERA_HEIGHT_PX / 2)
 
-        # Bore-sight crosshairs
+        # Crosshairs & 10px SLA circle
         cv2.line(bgr, (cx - 20, cy), (cx + 20, cy), (80, 80, 80), 1)
         cv2.line(bgr, (cx, cy - 20), (cx, cy + 20), (80, 80, 80), 1)
         cv2.circle(bgr, (cx, cy), 10, (100, 100, 100), 1)
 
-        # Draw lock reticle
         if detected_pos:
             dx, dy = int(round(detected_pos.x)), int(round(detected_pos.y))
             lock_color = (0, 230, 115) if error_px <= 10.0 else (0, 165, 255)
@@ -156,19 +261,60 @@ def main():
             cv2.putText(bgr, f"TRACK LOCKED ({dx}, {dy})", (dx + 16, dy - 5),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.42, lock_color, 1)
 
-        # HUD Top Banner
-        status_txt = "LOCKED" if (detected_pos and error_px <= 10.0) else "ACQUIRING..."
-        status_col = (0, 230, 115) if (detected_pos and error_px <= 10.0) else (0, 165, 255)
+        mode_txt = "AUTO-TRACK" if GIMBAL_STATE["auto_track"] else "MANUAL OPERATOR OVERRIDE"
+        mode_col = (0, 230, 115) if GIMBAL_STATE["auto_track"] else (0, 200, 255)
+
+        cv2.putText(bgr, f"NODE B: GROUND OPTICAL TERMINAL [{mode_txt}]", (20, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.48, mode_col, 2)
+        cv2.putText(bgr, f"CAM POS: ({GIMBAL_STATE['cam_x']:.1f}, {GIMBAL_STATE['cam_y']:.1f}) | ERR: {error_px:4.2f} px | {measured_fps:4.1f} FPS",
+                    (20, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.40, (220, 220, 220), 1)
+
+        cv2.imshow("Node B: Ground Optical Tracker (Terminal 2)", bgr)
+        key = cv2.waitKey(1) & 0xFF
         
-        cv2.putText(bgr, f"NODE B: GROUND TRACKER // {status_txt}", (20, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.50, status_col, 2)
-        cv2.putText(bgr, f"ERROR: {error_px:4.2f} px ({error_arcsec:5.1f}\") | SLEW: {slew_rate:4.2f} deg/s | {measured_fps:4.1f} FPS",
-                    (20, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (220, 220, 220), 1)
-
-        cv2.imshow("Node B: Autonomous Ground Optical Tracker (Terminal 2)", bgr)
-        if cv2.waitKey(1) & 0xFF in (ord('q'), 27):
+        # Interactive PTZ Controls
+        step_manual = 400.0 # px/s
+        if key == ord('q') or key == 27:
             break
+        elif key in (ord('w'), 0):  # Tilt Up (W or Up Arrow)
+            GIMBAL_STATE["auto_track"] = False
+            GIMBAL_STATE["manual_vy"] = -step_manual
+            GIMBAL_STATE["manual_vx"] = 0.0
+            print("[*] Operator PTZ Command: TILT UP")
+        elif key in (ord('s'), 1):  # Tilt Down (S or Down Arrow)
+            GIMBAL_STATE["auto_track"] = False
+            GIMBAL_STATE["manual_vy"] = step_manual
+            GIMBAL_STATE["manual_vx"] = 0.0
+            print("[*] Operator PTZ Command: TILT DOWN")
+        elif key in (ord('a'), 2):  # Pan Left (A or Left Arrow)
+            GIMBAL_STATE["auto_track"] = False
+            GIMBAL_STATE["manual_vx"] = -step_manual
+            GIMBAL_STATE["manual_vy"] = 0.0
+            print("[*] Operator PTZ Command: PAN LEFT")
+        elif key in (ord('d'), 3):  # Pan Right (D or Right Arrow)
+            GIMBAL_STATE["auto_track"] = False
+            GIMBAL_STATE["manual_vx"] = step_manual
+            GIMBAL_STATE["manual_vy"] = 0.0
+            print("[*] Operator PTZ Command: PAN RIGHT")
+        elif key in (ord('m'), ord('M'), 32):  # Space or M toggles Auto/Manual
+            GIMBAL_STATE["auto_track"] = not GIMBAL_STATE["auto_track"]
+            GIMBAL_STATE["manual_vx"] = 0.0
+            GIMBAL_STATE["manual_vy"] = 0.0
+            print(f"[*] PTZ Mode: {'AUTONOMOUS' if GIMBAL_STATE['auto_track'] else 'MANUAL OVERRIDE'}")
+        elif key in (ord('r'), ord('R')):
+            GIMBAL_STATE["cam_x"] = UNIVERSE_WIDTH_PX / 2.0
+            GIMBAL_STATE["cam_y"] = UNIVERSE_HEIGHT_PX / 2.0
+            GIMBAL_STATE["auto_track"] = True
+            GIMBAL_STATE["manual_vx"] = 0.0
+            GIMBAL_STATE["manual_vy"] = 0.0
+            print("[*] PTZ Camera Re-Centered.")
+        else:
+            # Damp manual velocity if key not pressed
+            GIMBAL_STATE["manual_vx"] *= 0.5
+            GIMBAL_STATE["manual_vy"] *= 0.5
 
-    sock.close()
+    sock_rx.close()
+    sock_tx.close()
     cv2.destroyAllWindows()
     print("[+] Node B stopped.")
 
