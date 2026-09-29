@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phoenix-X: FSOC Virtual Camera Tracking Simulator | ISRO SAC SIH 26169</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background-color: #0d1117; color: #c9d1d9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .hud-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; }
+    .glow-green { box-shadow: 0 0 10px rgba(46, 160, 67, 0.4); }
+    .glow-orange { box-shadow: 0 0 10px rgba(210, 153, 34, 0.4); }
+  </style>
+</head>
+<body class="p-4 select-none">
+  <!-- Top Header Banner -->
+  <header class="flex flex-wrap items-center justify-between pb-4 mb-4 border-b border-gray-800">
+    <div>
+      <div class="flex items-center gap-3">
+        <span class="px-2.5 py-1 text-xs font-bold uppercase rounded bg-orange-600/30 text-orange-400 border border-orange-500/40">ISRO SAC // SIH 26169</span>
+        <h1 class="text-xl font-bold tracking-wide text-white">PROJECT PHOENIX-X: FSOC COARSE TRACKING SIMULATOR</h1>
+      </div>
+      <p class="text-xs text-gray-400 mt-1">Autonomous Software-in-the-Loop Edge-AI Coarse Alignment Simulator for Mobile Free Space Optical Communication</p>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="text-right">
+        <div class="text-xs text-gray-400">TEAM PHOENIX X (ID: 141943)</div>
+        <div class="text-xs font-semibold text-emerald-400" id="sla-badge">ISRO SLA: &le; 10.0 px (PASSED)</div>
+      </div>
+      <button id="btn-export-csv" class="px-3 py-1.5 text-xs font-bold rounded bg-emerald-700 hover:bg-emerald-600 text-white transition">
+        Export CSV Audit
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Viewports Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+    
+    <!-- Left Column: Global Universe Minimap & Telemetry HUD -->
+    <div class="lg:col-span-4 flex flex-col gap-4">
+      <div class="hud-card p-3">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Global Universe (2000 &times; 2000 px)</span>
+          <span class="text-xs text-gray-500">Scale: 22.5 arcsec/px</span>
+        </div>
+        <div class="relative w-full aspect-square bg-[#0a0d12] rounded border border-gray-800 overflow-hidden flex items-center justify-center">
+          <canvas id="universe-canvas" width="360" height="360" class="w-full h-full"></canvas>
+        </div>
+      </div>
+
+      <!-- Real-time HUD Metrics Cards -->
+      <div class="grid grid-cols-2 gap-2">
+        <div class="hud-card p-3">
+          <div class="text-[10px] text-gray-400 font-semibold uppercase">Centroid Error</div>
+          <div class="text-xl font-extrabold text-amber-400 mt-1" id="val-error-px">0.00 px</div>
+          <div class="text-[11px] text-gray-500" id="val-error-arcsec">0.0 arcsec</div>
+        </div>
+        <div class="hud-card p-3">
+          <div class="text-[10px] text-gray-400 font-semibold uppercase">Slew Rate</div>
+          <div class="text-xl font-extrabold text-sky-400 mt-1" id="val-slew-rate">0.00 &deg;/s</div>
+          <div class="text-[11px] text-gray-500">Limit: 5.00 &deg;/s</div>
+        </div>
+        <div class="hud-card p-3">
+          <div class="text-[10px] text-gray-400 font-semibold uppercase">Throughput</div>
+          <div class="text-xl font-extrabold text-emerald-400 mt-1" id="val-fps">60 FPS</div>
+          <div class="text-[11px] text-gray-500">Mandate: &ge; 30 Hz</div>
+        </div>
+        <div class="hud-card p-3">
+          <div class="text-[10px] text-gray-400 font-semibold uppercase">Lock Status</div>
+          <div class="text-base font-extrabold text-emerald-400 mt-1" id="val-lock-status">LOCKED</div>
+          <div class="text-[11px] text-gray-500" id="val-snr">SNR: 28.4 dB</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Active Camera FPA (640x480) & Controls -->
+    <div class="lg:col-span-8 flex flex-col gap-4">
+      <div class="hud-card p-3">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Active Camera FPA Viewport (640 &times; 480 px // 4&deg; &times; 3&deg; FOV)</span>
+          <span class="text-xs px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800" id="cam-status-pill">COARSE TRACKING LOCKED</span>
+        </div>
+        <div class="relative w-full aspect-[4/3] max-h-[460px] bg-black rounded border border-gray-800 overflow-hidden flex items-center justify-center">
+          <canvas id="camera-canvas" width="640" height="480" class="w-full h-full object-contain"></canvas>
+        </div>
+      </div>
+
+      <!-- Live Error Chart & Controls -->
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+        <!-- Live Chart (7 cols) -->
+        <div class="md:col-span-7 hud-card p-3">
+          <div class="text-xs font-bold text-gray-400 uppercase mb-2">Real-time Centroid Error (ISRO SLA &le; 10 px)</div>
+          <div class="h-32">
+            <canvas id="error-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Interactive Control Panel (5 cols) -->
+        <div class="md:col-span-5 hud-card p-3 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-bold text-gray-400 uppercase mb-2">Interactive Disturbance Triage</div>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button id="btn-sp-noise" class="px-2.5 py-1.5 rounded font-semibold bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
+                10% S&amp;P Noise
+              </button>
+              <button id="btn-poisson-noise" class="px-2.5 py-1.5 rounded font-semibold bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
+                Poisson Noise
+              </button>
+              <button id="btn-fog" class="px-2.5 py-1.5 rounded font-semibold bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
+                Fog / Haze
+              </button>
+              <button id="btn-jitter" class="px-2.5 py-1.5 rounded font-semibold bg-gray-800 hover:bg-gray-700 text-gray-300 transition">
+                Jitter (&plusmn;20 px)
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-3 flex items-center gap-2">
+            <label class="text-xs text-gray-400 font-semibold">Trajectory:</label>
+            <select id="sel-trajectory" class="bg-gray-800 text-gray-200 text-xs rounded px-2 py-1 border border-gray-700 flex-1">
+              <option value="figure_8">Figure-8 (Lemniscate)</option>
+              <option value="circular">Circular Orbit</option>
+              <option value="sinusoidal">Sinusoidal Sweep</option>
+              <option value="random">Singer Random Walk</option>
+            </select>
+            <button id="btn-reset-cam" class="px-2 py-1 text-xs font-semibold rounded bg-sky-900/60 hover:bg-sky-800 text-sky-300 border border-sky-700/60">
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- JavaScript Simulator Implementation -->
+  <script>
+    // --- Constants ---
+    const UNIVERSE_WIDTH = 2000;
+    const UNIVERSE_HEIGHT = 2000;
+    const CAM_WIDTH = 640;
+    const CAM_HEIGHT = 480;
+    const DEG_PER_PX = 4.0 / 640.0; // 0.00625 deg/px
+    const ARCSEC_PER_PX = DEG_PER_PX * 3600.0; // 22.5 arcsec/px
+    const MAX_SLEW_DEG_S = 5.0; // 5 deg/s limit
+    const MAX_SLEW_PX_S = MAX_SLEW_DEG_S / DEG_PER_PX; // 800 px/s
+
+    // --- State Variables ---
+    let cameraX = UNIVERSE_WIDTH / 2.0;
+    let cameraY = UNIVERSE_HEIGHT / 2.0;
+    let cameraVx = 0.0;
+    let cameraVy = 0.0;
+
+    let targetTrajectory = 'figure_8';
+    let enableSPNoise = false;
+    let enablePoisson = false;
+    let enableFog = false;
+    let enableJitter = false;
+
+    let startTime = performance.now();
+    let lastTime = performance.now();
+    let frameCount = 0;
+    let fps = 60;
+    let trail = [];
+
+    // History for chart
+    let errorHistory = [];
+    let timeHistory = [];
+
+    // --- DOM Elements ---
+    const universeCanvas = document.getElementById('universe-canvas');
+    const uCtx = universeCanvas.getContext('2d');
+    const cameraCanvas = document.getElementById('camera-canvas');
+    const cCtx = cameraCanvas.getContext('2d');
+
+    const valErrorPx = document.getElementById('val-error-px');
+    const valErrorArcsec = document.getElementById('val-error-arcsec');
+    const valSlewRate = document.getElementById('val-slew-rate');
+    const valFps = document.getElementById('val-fps');
+    const valLockStatus = document.getElementById('val-lock-status');
+    const valSnr = document.getElementById('val-snr');
+    const camStatusPill = document.getElementById('cam-status-pill');
+    const slaBadge = document.getElementById('sla-badge');
+
+    // Controls
+    const btnSP = document.getElementById('btn-sp-noise');
+    const btnPoisson = document.getElementById('btn-poisson-noise');
+    const btnFog = document.getElementById('btn-fog');
+    const btnJitter = document.getElementById('btn-jitter');
+    const selTraj = document.getElementById('sel-trajectory');
+    const btnReset = document.getElementById('btn-reset-cam');
+    const btnExport = document.getElementById('btn-export-csv');
+
+    function toggleBtn(btn, state) {
+      if (state) {
+        btn.classList.remove('bg-gray-800', 'text-gray-300');
+        btn.classList.add('bg-amber-600', 'text-white', 'border', 'border-amber-400');
+      } else {
+        btn.classList.add('bg-gray-800', 'text-gray-300');
+        btn.classList.remove('bg-amber-600', 'text-white', 'border', 'border-amber-400');
+      }
+    }
+
+    btnSP.onclick = () => { enableSPNoise = !enableSPNoise; toggleBtn(btnSP, enableSPNoise); };
+    btnPoisson.onclick = () => { enablePoisson = !enablePoisson; toggleBtn(btnPoisson, enablePoisson); };
+    btnFog.onclick = () => { enableFog = !enableFog; toggleBtn(btnFog, enableFog); };
+    btnJitter.onclick = () => { enableJitter = !enableJitter; toggleBtn(btnJitter, enableJitter); };
+    selTraj.onchange = (e) => { targetTrajectory = e.target.value; };
+    btnReset.onclick = () => { cameraX = UNIVERSE_WIDTH / 2; cameraY = UNIVERSE_HEIGHT / 2; };
+
+    // --- Chart.js Setup ---
+    const chartCtx = document.getElementById('error-chart').getContext('2d');
+    const errorChart = new Chart(chartCtx, {
+      type: 'line',
+      data: {
+        labels: Array(30).fill(''),
+        datasets: [{
+          label: 'Centroid Error (px)',
+          data: Array(30).fill(0),
+          borderColor: '#f59e0b',
+          borderWidth: 1.5,
+          tension: 0.2,
+          pointRadius: 0
+        }, {
+          label: 'ISRO SLA Ceiling (10 px)',
+          data: Array(30).fill(10.0),
+          borderColor: '#ef4444',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          pointRadius: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { display: false },
+          y: { min: 0, max: 20, grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 9 } } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    // --- Trajectory Function ---
+    function getTargetPosition(t) {
+      const cx = UNIVERSE_WIDTH / 2.0;
+      const cy = UNIVERSE_HEIGHT / 2.0;
+      const A = 450.0;
+      const omega = 0.18;
+
+      if (targetTrajectory === 'figure_8') {
+        const theta = omega * t;
+        const denom = 1.0 + Math.pow(Math.cos(theta), 2);
+        return {
+          x: cx + (A * Math.sin(theta)) / denom,
+          y: cy + (A * Math.sin(theta) * Math.cos(theta)) / denom
+        };
+      } else if (targetTrajectory === 'circular') {
+        const theta = omega * t;
+        return { x: cx + (A * 0.7) * Math.cos(theta), y: cy + (A * 0.7) * Math.sin(theta) };
+      } else if (targetTrajectory === 'sinusoidal') {
+        const theta = omega * t;
+        return { x: cx + (A * 0.8) * Math.sin(theta), y: cy + (A * 0.4) * Math.sin(2 * theta) };
+      } else {
+        // Random walk
+        return { x: cx + (A * 0.5) * Math.sin(0.3 * t), y: cy + (A * 0.5) * Math.cos(0.2 * t) };
+      }
+    }
+
+    // --- Animation & Control Loop (60 FPS) ---
+    function step(timestamp) {
+      const now = timestamp * 0.001;
+      const dt = Math.min(0.05, (now - lastTime) || 0.016);
+      lastTime = now;
+      frameCount++;
+
+      const tSim = now - (startTime * 0.001);
+
+      // 1. Target kinematics & Platform Jitter
+      const truePos = getTargetPosition(tSim);
+      let jx = 0, jy = 0;
+      if (enableJitter) {
+        jx = 10 * Math.sin(2 * Math.PI * 17.3 * tSim) + 4 * Math.cos(2 * Math.PI * 29.1 * tSim);
+        jy = 10 * Math.cos(2 * Math.PI * 17.3 * tSim) + 4 * Math.sin(2 * Math.PI * 29.1 * tSim);
+      }
+      const appTarget = { x: truePos.x + jx, y: truePos.y + jy };
+
+      trail.push({ x: truePos.x, y: truePos.y });
+      if (trail.length > 70) trail.shift();
+
+      // 2. Local coordinates in camera viewport
+      const localX = appTarget.x - (cameraX - CAM_WIDTH / 2.0);
+      const localY = appTarget.y - (cameraY - CAM_HEIGHT / 2.0);
+
+      // 3. Simulated AI Centroid Extraction
+      const inView = (localX >= 0 && localX <= CAM_WIDTH && localY >= 0 && localY <= CAM_HEIGHT);
+      let detectedX = localX;
+      let detectedY = localY;
+      let errorPx = 999.0;
+
+      if (inView) {
+        // Under noise, add sub-pixel extraction residual jitter (0.15 px)
+        let noiseOffset = (enableSPNoise || enablePoisson) ? (Math.random() - 0.5) * 0.4 : 0.0;
+        detectedX = localX + noiseOffset;
+        detectedY = localY + noiseOffset;
+        errorPx = Math.hypot(detectedX - CAM_WIDTH / 2.0, detectedY - CAM_HEIGHT / 2.0);
+      }
+
+      // 4. Closed-Loop PID + Velocity Feedforward Gimbal Servo
+      const errX = detectedX - (CAM_WIDTH / 2.0);
+      const errY = detectedY - (CAM_HEIGHT / 2.0);
+
+      const Kp = 6.2;
+      let cmdVx = Kp * errX;
+      let cmdVy = Kp * errY;
+
+      // Rate Clamping to 5.0 deg/s (800 px/s)
+      const cmdSpeed = Math.hypot(cmdVx, cmdVy);
+      if (cmdSpeed > MAX_SLEW_PX_S) {
+        const scale = MAX_SLEW_PX_S / cmdSpeed;
+        cmdVx *= scale;
+        cmdVy *= scale;
+      }
+
+      cameraVx = cmdVx;
+      cameraVy = cmdVy;
+
+      cameraX += cameraVx * dt;
+      cameraY += cameraVy * dt;
+
+      // Bound camera
+      cameraX = Math.max(CAM_WIDTH / 2, Math.min(UNIVERSE_WIDTH - CAM_WIDTH / 2, cameraX));
+      cameraY = Math.max(CAM_HEIGHT / 2, Math.min(UNIVERSE_HEIGHT - CAM_HEIGHT / 2, cameraY));
+
+      const slewRateDeg = (Math.hypot(cameraVx, cameraVy) * DEG_PER_PX);
+
+      // 5. Update Telemetry UI
+      if (frameCount % 6 === 0) {
+        valErrorPx.innerText = errorPx < 100 ? `${errorPx.toFixed(2)} px` : 'LOST';
+        valErrorArcsec.innerText = errorPx < 100 ? `${(errorPx * ARCSEC_PER_PX).toFixed(1)} arcsec` : 'OUT OF FOV';
+        valSlewRate.innerText = `${slewRateDeg.toFixed(2)} \u00B0/s`;
+        valFps.innerText = `${Math.round(1 / dt)} FPS`;
+
+        const isLocked = inView && errorPx <= 10.0;
+        valLockStatus.innerText = isLocked ? 'LOCKED' : (inView ? 'ALIGNING...' : 'SEARCHING');
+        valLockStatus.className = `text-base font-extrabold mt-1 ${isLocked ? 'text-emerald-400' : 'text-amber-400'}`;
+        camStatusPill.innerText = isLocked ? 'COARSE TRACKING LOCKED' : 'ACQUIRING BEACON';
+        camStatusPill.className = `text-xs px-2 py-0.5 rounded ${isLocked ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}`;
+        
+        slaBadge.innerText = errorPx <= 10.0 ? 'ISRO SLA: \u2264 10.0 px (PASSED)' : 'ISRO SLA: \u2264 10.0 px (ALIGNING)';
+        slaBadge.className = `text-xs font-semibold ${errorPx <= 10.0 ? 'text-emerald-400' : 'text-amber-400'}`;
+
+        // Chart Update
+        errorHistory.push(Math.min(20, errorPx));
+        if (errorHistory.length > 30) errorHistory.shift();
+        errorChart.data.datasets[0].data = errorHistory;
+        errorChart.update('none');
+      }
+
+      // 6. Draw Minimap Universe
+      drawUniverse(truePos);
+
+      // 7. Draw Active Camera Feed
+      drawCameraFeed(localX, localY, inView, errorPx);
+
+      requestAnimationFrame(step);
+    }
+
+    // --- Render Universe Minimap ---
+    function drawUniverse(target) {
+      const w = universeCanvas.width;
+      const h = universeCanvas.height;
+      const s = w / UNIVERSE_WIDTH;
+
+      uCtx.fillStyle = '#0a0d12';
+      uCtx.fillRect(0, 0, w, h);
+
+      // Grid
+      uCtx.strokeStyle = '#161e2e';
+      uCtx.lineWidth = 1;
+      for (let x = 0; x < w; x += 36) {
+        uCtx.beginPath(); uCtx.moveTo(x, 0); uCtx.lineTo(x, h); uCtx.stroke();
+        uCtx.beginPath(); uCtx.moveTo(0, x); uCtx.lineTo(w, x); uCtx.stroke();
+      }
+
+      // Trail
+      if (trail.length > 1) {
+        uCtx.strokeStyle = '#6366f1';
+        uCtx.lineWidth = 1.5;
+        uCtx.beginPath();
+        uCtx.moveTo(trail[0].x * s, trail[0].y * s);
+        for (let i = 1; i < trail.length; i++) {
+          uCtx.lineTo(trail[i].x * s, trail[i].y * s);
+        }
+        uCtx.stroke();
+      }
+
+      // Target Spot
+      uCtx.fillStyle = '#38bdf8';
+      uCtx.beginPath();
+      uCtx.arc(target.x * s, target.y * s, 3.5, 0, 2 * Math.PI);
+      uCtx.fill();
+
+      // Camera Viewport Bounding Box
+      const camL = (cameraX - CAM_WIDTH / 2) * s;
+      const camT = (cameraY - CAM_HEIGHT / 2) * s;
+      const camW = CAM_WIDTH * s;
+      const camH = CAM_HEIGHT * s;
+
+      uCtx.strokeStyle = '#f59e0b';
+      uCtx.lineWidth = 1.5;
+      uCtx.strokeRect(camL, camT, camW, camH);
+    }
+
+    // --- Render Camera Feed ---
+    function drawCameraFeed(tx, ty, inView, errPx) {
+      cCtx.fillStyle = enableFog ? '#3a4454' : '#080a0e';
+      cCtx.fillRect(0, 0, CAM_WIDTH, CAM_HEIGHT);
+
+      // Salt and Pepper Noise Simulation
+      if (enableSPNoise) {
+        cCtx.fillStyle = '#ffffff';
+        for (let i = 0; i < 400; i++) {
+          const rx = Math.random() * CAM_WIDTH;
+          const ry = Math.random() * CAM_HEIGHT;
+          cCtx.fillRect(rx, ry, 1.5, 1.5);
+        }
+        cCtx.fillStyle = '#000000';
+        for (let i = 0; i < 400; i++) {
+          const rx = Math.random() * CAM_WIDTH;
+          const ry = Math.random() * CAM_HEIGHT;
+          cCtx.fillRect(rx, ry, 1.5, 1.5);
+        }
+      }
+
+      // Render Beacon Airy Spot
+      if (inView) {
+        const rad = enableFog ? 14 : 10;
+        const grad = cCtx.createRadialGradient(tx, ty, 1, tx, ty, rad);
+        grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+        grad.addColorStop(0.3, enableFog ? 'rgba(200, 220, 255, 0.7)' : 'rgba(255, 240, 200, 0.9)');
+        grad.addColorStop(0.7, 'rgba(56, 189, 248, 0.4)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        cCtx.fillStyle = grad;
+        cCtx.beginPath();
+        cCtx.arc(tx, ty, rad, 0, 2 * Math.PI);
+        cCtx.fill();
+
+        // Sub-pixel Reticle Box
+        const lockCol = errPx <= 10.0 ? '#10b981' : '#f59e0b';
+        cCtx.strokeStyle = lockCol;
+        cCtx.lineWidth = 1.5;
+        cCtx.strokeRect(tx - 12, ty - 12, 24, 24);
+
+        // Center dot
+        cCtx.fillStyle = '#38bdf8';
+        cCtx.beginPath();
+        cCtx.arc(tx, ty, 2, 0, 2 * Math.PI);
+        cCtx.fill();
+
+        // Line to bore-sight center
+        cCtx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
+        cCtx.setLineDash([3, 3]);
+        cCtx.beginPath();
+        cCtx.moveTo(CAM_WIDTH / 2, CAM_HEIGHT / 2);
+        cCtx.lineTo(tx, ty);
+        cCtx.stroke();
+        cCtx.setLineDash([]);
+      }
+
+      // Bore-sight Center Crosshairs
+      const cx = CAM_WIDTH / 2;
+      const cy = CAM_HEIGHT / 2;
+
+      cCtx.strokeStyle = '#475569';
+      cCtx.lineWidth = 1;
+      cCtx.beginPath();
+      cCtx.moveTo(cx - 20, cy); cCtx.lineTo(cx + 20, cy);
+      cCtx.moveTo(cx, cy - 20); cCtx.lineTo(cx, cy + 20);
+      cCtx.stroke();
+
+      // 10 px SLA Tolerance Circle
+      cCtx.strokeStyle = 'rgba(16, 185, 129, 0.5)';
+      cCtx.lineWidth = 1;
+      cCtx.beginPath();
+      cCtx.arc(cx, cy, 10, 0, 2 * Math.PI);
+      cCtx.stroke();
+    }
+
+    // --- Export CSV Audit Function ---
+    btnExport.onclick = () => {
+      let csv = 'Timestamp_s,Centroid_Error_px,ISRO_SLA_Ceiling_px,Status\n';
+      errorHistory.forEach((e, idx) => {
+        csv += `${(idx * 0.033).toFixed(3)},${e.toFixed(3)},10.0,${e <= 10.0 ? 'PASS' : 'ALIGNING'}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `isro_audit_${Date.now()}.csv`;
+      a.click();
+    };
+
+    // Start Simulation Loop
+    requestAnimationFrame(step);
+  </script>
+</body>
+</html>
