@@ -24,6 +24,18 @@ ARCSEC_PER_PIXEL = DEG_PER_PIXEL * 3600.0
 RAD_PER_PIXEL = math.radians(DEG_PER_PIXEL)
 URAD_PER_PIXEL = RAD_PER_PIXEL * 1e6
 
+def pixels_to_arcsec(px: float) -> float:
+    return px * ARCSEC_PER_PIXEL
+
+def arcsec_to_pixels(arcsec: float) -> float:
+    return arcsec / ARCSEC_PER_PIXEL
+
+def pixels_to_urad(px: float) -> float:
+    return px * URAD_PER_PIXEL
+
+def urad_to_pixels(urad: float) -> float:
+    return urad / URAD_PER_PIXEL
+
 # Gimbal Constraints
 DEFAULT_MAX_SLEW_RATE_DEG_S = 5.0   # 5 degrees / second default
 MAX_SLEW_RATE_PX_S = DEFAULT_MAX_SLEW_RATE_DEG_S / DEG_PER_PIXEL  # 800 px / second

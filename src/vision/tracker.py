@@ -11,6 +11,7 @@ import numpy as np
 import cv2
 from typing import Optional, Tuple
 from src.core.coordinates import Point2D, CAMERA_WIDTH_PX, CAMERA_HEIGHT_PX
+from src.vision.deep_saliency_net import DeepBeaconSaliencyNet
 
 class BeaconTracker:
     def __init__(self):
@@ -19,24 +20,37 @@ class BeaconTracker:
         self.last_detected_pos: Optional[Point2D] = None
         self.lock_retained = False
         self.loss_frames = 0
+        
+        # Deep Saliency Edge-AI Engine
+        self.ai_net = DeepBeaconSaliencyNet()
+        self.use_deep_ai = False  # Toggleable between Classical & Deep AI
+        self.last_heatmap = None
+
+    def toggle_ai(self):
+        self.use_deep_ai = not self.use_deep_ai
+        return self.use_deep_ai
 
     def process_frame(self, raw_frame: np.ndarray) -> Tuple[Optional[Point2D], float, float]:
         """
         Processes a single 640x480 monochrome camera frame.
         Returns: (detected_subpixel_centroid, error_pixels, snr_db)
         """
-        # Step 1: High-Speed Non-Linear Rank-Order Median Filter
-        # A 5x5 kernel completely strips 100% of 10% Salt & Pepper noise clusters in ~0.9 ms
+        # Step 1: Preprocessing & Candidate ROI Proposal
         denoised = cv2.medianBlur(raw_frame, 5)
-        
-        # Step 2: Background Estimation & Dynamic Saliency
-        # Subtract background to handle fog/ambient backscatter
         bg_val = float(np.percentile(denoised, 60))
         foreground = np.maximum(0, denoised.astype(np.float32) - bg_val)
-        
-        # Step 3: Coarse ROI Proposal (Peak Search)
-        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(foreground)
-        peak_x, peak_y = max_loc
+
+        if self.use_deep_ai:
+            # Branch A: Deep Saliency Edge-AI Neural Network Candidate Proposal
+            heatmap, (ai_px, ai_py), confidence = self.ai_net.forward(raw_frame)
+            self.last_heatmap = heatmap
+            peak_x = int(np.clip(round(ai_px), 0, raw_frame.shape[1] - 1))
+            peak_y = int(np.clip(round(ai_py), 0, raw_frame.shape[0] - 1))
+            max_val = float(foreground[peak_y, peak_x])
+        else:
+            # Branch B: Classical Rank-Order Saliency Search (< 1 ms)
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(foreground)
+            peak_x, peak_y = max_loc
         
         # Kinematic Validation Gate: If we had a verified track, check for impossible teleports (> 60 px/frame)
         if self.last_detected_pos is not None:

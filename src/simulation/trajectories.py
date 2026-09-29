@@ -21,7 +21,10 @@ class TrajectoryGenerator:
         self.rvx = 35.0
         self.rvy = 25.0
 
-    def set_mode(self, mode: str):
+    def set_mode(self, mode: str, current_pos: Point2D = None):
+        if current_pos is not None:
+            self.rx = current_pos.x
+            self.ry = current_pos.y
         self.mode = mode.lower()
 
     def get_position(self, t: float) -> Point2D:

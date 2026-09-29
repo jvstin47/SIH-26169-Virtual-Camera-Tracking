@@ -102,11 +102,18 @@ class OpticalEngine:
         
         # 4. Salt and Pepper Noise (Around 10% of image area)
         if self.enable_salt_and_pepper:
-            prob = 0.10  # 10% of total image pixels corrupted
-            rnd = np.random.random(frame.shape)
-            # Salt (255 intensity hot pixels)
-            result[rnd < (prob / 2.0)] = 255
-            # Pepper (0 intensity cold pixels)
-            result[(rnd >= (prob / 2.0)) & (rnd < prob)] = 0
+            result = inject_salt_and_pepper_noise(result, prob=0.10)
             
         return result
+
+def inject_salt_and_pepper_noise(frame: np.ndarray, prob: float = 0.10, noise_ratio: float = None) -> np.ndarray:
+    """Injects Salt & Pepper noise into an 8-bit image."""
+    if noise_ratio is not None:
+        prob = noise_ratio
+    result = frame.copy()
+    rnd = np.random.random(frame.shape)
+    # Salt (255 intensity hot pixels)
+    result[rnd < (prob / 2.0)] = 255
+    # Pepper (0 intensity cold pixels)
+    result[(rnd >= (prob / 2.0)) & (rnd < prob)] = 0
+    return result
