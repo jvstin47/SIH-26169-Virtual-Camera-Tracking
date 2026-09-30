@@ -155,6 +155,7 @@ def main():
     frame_count = 0
     t_start = time.time()
     last_t = time.time()
+    fps_timer = time.time()
     measured_fps = 30.0
 
     max_slew_deg_s = DEFAULT_MAX_SLEW_RATE_DEG_S
@@ -186,7 +187,10 @@ def main():
         last_t = now
 
         if frame_count % 15 == 0:
-            measured_fps = 15.0 / (now - (t_start + (frame_count - 15) * 0.033))
+            elapsed = now - fps_timer
+            if elapsed > 0:
+                measured_fps = 15.0 / elapsed
+            fps_timer = now
 
         # -----------------------------------------------------------------
         # Vision Detection & Sub-Pixel Centroiding
