@@ -57,12 +57,19 @@ def main():
     print("      [Space] Inject Evasive Maneuver Jump")
     print("      [Q] Quit Node A\n")
 
+    import argparse
+    parser = argparse.ArgumentParser(description="Node A: Remote Maneuvering Satellite Transmitter")
+    parser.add_argument("--port", type=int, default=9999,
+                        help="UDP port to stream optical frames to (default: 9999 for Node C Atmospheric Channel, or directly to Node B)")
+    args = parser.parse_args()
+
     # Start PTZ receiver thread
     t_listener = threading.Thread(target=ptz_listener, daemon=True)
     t_listener.start()
 
     sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    target_addr = ("127.0.0.1", 9999)
+    target_addr = ("127.0.0.1", args.port)
+    print(f"[*] Streaming video frames to UDP 127.0.0.1:{args.port}...")
 
     optics = OpticalEngine(spot_size_px=10, spot_peak_intensity=250)
     

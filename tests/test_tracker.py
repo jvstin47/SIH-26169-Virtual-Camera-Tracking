@@ -81,5 +81,22 @@ class TestFSOCPipeline(unittest.TestCase):
         self.assertIsInstance(coast_vx, float)
         self.assertIsInstance(coast_vy, float)
 
+    def test_atmospheric_channel_emulator(self):
+        from distributed_demo.atmospheric_channel import AtmosphericChannelEmulator
+        channel = AtmosphericChannelEmulator()
+        frame = np.full((CAMERA_HEIGHT_PX, CAMERA_WIDTH_PX), 20, dtype=np.uint8)
+        # Place beacon
+        cv2.circle(frame, (320, 240), 6, 250, -1)
+        
+        corrupted = channel.apply_channel_effects(frame, t=1.0)
+        self.assertEqual(corrupted.shape, (CAMERA_HEIGHT_PX, CAMERA_WIDTH_PX))
+        
+        # Test tracker on channel-corrupted frame (should stay within ISRO 10 px SLA despite turbulence displacement)
+        tracker = BeaconTracker()
+        centroid, err_px, snr = tracker.process_frame(corrupted)
+        self.assertIsNotNone(centroid)
+        self.assertAlmostEqual(centroid.x, 320.0, delta=10.0)
+        self.assertAlmostEqual(centroid.y, 240.0, delta=10.0)
+
 if __name__ == '__main__':
     unittest.main()

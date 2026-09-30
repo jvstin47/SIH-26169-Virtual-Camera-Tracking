@@ -112,8 +112,19 @@ def main():
     print("=" * 70)
     print("  NODE B: GROUND OPTICAL TRACKING TERMINAL WITH PTZ CONTROL (TERMINAL 2)")
     print("=" * 70)
-    print("[*] Listening on UDP 127.0.0.1:9999...")
-    print("[*] Transmitting PTZ feedback to Node A on 127.0.0.1:9998...")
+    import argparse
+    parser = argparse.ArgumentParser(description="Node B: Autonomous Ground Optical Tracking Station")
+    parser.add_argument("--port", type=int, default=9997,
+                        help="UDP port to listen on (default: 9997 for 3-Terminal Mode via Node C Channel; use 9999 for Direct 2-Terminal Mode)")
+    args = parser.parse_args()
+
+    listen_port = args.port
+    print(f"[*] Ingesting optical feed on UDP 127.0.0.1:{listen_port}...")
+    if listen_port == 9997:
+        print("    [Mode: 3-TERMINAL MULTI-HOP via Node C Atmospheric Channel]")
+    else:
+        print("    [Mode: 2-TERMINAL DIRECT LINK from Node A Satellite]")
+    print("[*] Transmitting closed-loop PTZ feedback to Node A on 127.0.0.1:9998...")
     print("[+] Live Mission Control Dashboard active at: http://localhost:8080/live.html")
     print("\nOperator PTZ Controls:")
     print("  [W / Up]    Tilt Up")
@@ -130,7 +141,7 @@ def main():
 
     # UDP Sockets
     sock_rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock_rx.bind(("127.0.0.1", 9999))
+    sock_rx.bind(("127.0.0.1", listen_port))
     sock_rx.settimeout(2.0)
 
     sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

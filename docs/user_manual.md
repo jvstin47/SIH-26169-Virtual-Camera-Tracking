@@ -50,41 +50,51 @@ python3 main.py
 
 ---
 
-### Mode 2: Distributed Multi-Terminal Satellite Demonstration (IPC over UDP)
-Demonstrates multi-node flight avionics communication where Terminal 1 simulates a maneuvering satellite and Terminal 2 acts as the autonomous ground optical tracking station.
+### Mode 2: Distributed Multi-Terminal Demonstration (Hardware-in-the-Loop)
+Demonstrates multi-node flight avionics communication with an active atmospheric channel emulator acting as a physical Man-in-the-Middle (MitM) node.
 
+#### Architecture (3-Terminal Setup):
 ```
-Terminal 1: target_satellite.py  ──► UDP:9999 (Frames) ──►  Terminal 2: ground_tracker.py
-                                 ◄── UDP:9998 (PTZ)    ──◄           │
-                                                                     ▼
-                                                      http://localhost:8080/live.html
+Terminal 1: Satellite       ──► UDP 9999 ──►  Terminal 2: Channel Emulator  ──► UDP 9997 ──►  Terminal 3: Ground Tracker
+(target_satellite.py)                         (atmospheric_channel.py)                        (ground_tracker.py)
+        ▲                                                                                              │
+        └────────────────────────────── Closed-Loop PTZ Feedback (UDP 9998) ───────────────────────────┘
+                                                                                                       ▼
+                                                                                         http://localhost:8080/live.html
 ```
 
-#### Step-by-Step Launch:
-1. **Open Terminal 2 (Ground Optical Tracking Station)**:
+#### Step-by-Step Launch (3 Terminals):
+1. **Terminal 3 (Ground Optical Tracker)**:
    ```bash
    python3 distributed_demo/ground_tracker.py
+   # Ingests from UDP port 9997 by default
    ```
-2. **Open Terminal 1 (Remote Satellite Transmitter)**:
+2. **Terminal 2 (Atmospheric Channel & Turbulence Emulator)**:
+   ```bash
+   python3 distributed_demo/atmospheric_channel.py
+   # Receives on UDP 9999, corrupts frame with Kolmogorov turbulence/fog/S&P noise, forwards to UDP 9997
+   ```
+3. **Terminal 1 (Remote Satellite Transmitter)**:
    ```bash
    python3 distributed_demo/target_satellite.py
+   # Streams satellite feed to UDP 9999
    ```
-3. **Open Your Browser**:
-   Navigate to:
-   ```
-   http://localhost:8080/live.html
-   ```
+4. **Mission Control Browser**:
+   Open `http://localhost:8080/live.html` to see the real-time radar polar scope and manual PTZ override controls.
 
-#### Interactive PTZ Operator Controls:
-* **Keyboard in Terminal 2**:
-  * `W` or `Up Arrow`: Tilt Up
-  * `S` or `Down Arrow`: Tilt Down
-  * `A` or `Left Arrow`: Pan Left
-  * `D` or `Right Arrow`: Pan Right
+*(Note: For a simple 2-terminal direct setup without the channel emulator, run `python3 distributed_demo/ground_tracker.py --port 9999` and `python3 distributed_demo/target_satellite.py`).*
+
+#### Interactive Terminal Controls:
+* **Terminal 2 (Atmospheric Channel Emulator)**:
+  * `[1]` Cycle Impulsive Noise: 0% $\rightarrow$ 10% (ISRO SLA) $\rightarrow$ 25% (Solar Storm)
+  * `[2]` Toggle Kolmogorov Optical Wavefront Turbulence / Heat Shimmer
+  * `[3]` Toggle Heavy Cloud Obscuration & Beer-Lambert Fog Attenuation
+  * `[4]` Trigger Solar Glare / Blinding Sensor Flare
+  * `[5]` Trigger Sudden Optical Channel Fading Dropout (1-second blackout)
+* **Terminal 3 (Ground Tracker Operator PTZ)**:
+  * `W / Up`: Tilt Up | `S / Down`: Tilt Down | `A / Left`: Pan Left | `D / Right`: Pan Right
   * `M` or `SPACE`: Toggle between **Autonomous Auto-Track** and **Manual Operator Override**
-  * `R`: Re-Center Gimbal Camera
-* **Web Cockpit Controls**:
-  * Click the on-screen directional buttons: **Pan Left**, **Pan Right**, **Tilt Up**, **Tilt Down**, **Re-Center**, or toggle **Auto-Track**.
+  * `R`: Re-Center Gimbal Camera to Origin
 
 ---
 
