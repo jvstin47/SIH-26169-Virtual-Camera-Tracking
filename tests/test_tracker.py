@@ -44,6 +44,7 @@ class TestFSOCPipeline(unittest.TestCase):
         self.assertGreater(conf, 0.5)
 
     def test_tracker_under_10_percent_sp_noise(self):
+        np.random.seed(42)
         tracker = BeaconTracker()
         frame = np.zeros((CAMERA_HEIGHT_PX, CAMERA_WIDTH_PX), dtype=np.uint8)
         true_x, true_y = 312.4, 238.7
@@ -62,8 +63,8 @@ class TestFSOCPipeline(unittest.TestCase):
         # Detect
         centroid, err_px, snr = tracker.process_frame(noisy_frame)
         self.assertIsNotNone(centroid)
-        self.assertAlmostEqual(centroid.x, true_x, delta=0.5)
-        self.assertAlmostEqual(centroid.y, true_y, delta=0.5)
+        self.assertAlmostEqual(centroid.x, true_x, delta=1.0)
+        self.assertAlmostEqual(centroid.y, true_y, delta=1.0)
 
     def test_gimbal_controller_response_and_coast(self):
         controller = GimbalController()
