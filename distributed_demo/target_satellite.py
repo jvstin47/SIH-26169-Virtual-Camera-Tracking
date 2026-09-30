@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.core.coordinates import UNIVERSE_WIDTH_PX, UNIVERSE_HEIGHT_PX, CAMERA_WIDTH_PX, CAMERA_HEIGHT_PX
 from src.optics.atmosphere_and_noise import OpticalEngine
+from src.core.network import UDPSender
 
 # Shared state for camera center commanded by Node B
 CAM_STATE = {
@@ -69,6 +70,7 @@ def main():
 
     sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     target_addr = ("127.0.0.1", args.port)
+    udp_sender = UDPSender(sock_tx, target_addr)
     print(f"[*] Streaming video frames to UDP 127.0.0.1:{args.port}...")
 
     optics = OpticalEngine(spot_size_px=10, spot_peak_intensity=250)
@@ -149,11 +151,7 @@ def main():
         meta_json = json.dumps(metadata).encode('utf-8')
         packet = len(meta_json).to_bytes(4, 'big') + meta_json + jpg_bytes
 
-        if len(packet) < 65000:
-            try:
-                sock_tx.sendto(packet, target_addr)
-            except Exception:
-                pass
+        udp_sender.send_frame(frame_id, packet)
 
         # Terminal 1 Display
         cv2.putText(degraded, f"NODE A: SATELLITE BEACON TRANSMITTER (FRAME {frame_id})", (20, 30),

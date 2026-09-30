@@ -27,6 +27,7 @@ from src.core.coordinates import (
 )
 from src.vision.tracker import BeaconTracker
 from src.control.gimbal_controller import GimbalController
+from src.core.network import UDPReceiver
 
 # Shared global state for gimbal and telemetry
 GIMBAL_STATE = {
@@ -143,6 +144,7 @@ def main():
     sock_rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock_rx.bind(("127.0.0.1", listen_port))
     sock_rx.settimeout(2.0)
+    receiver = UDPReceiver(sock_rx)
 
     sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     node_a_addr = ("127.0.0.1", 9998)
@@ -159,10 +161,11 @@ def main():
     max_slew_px_s = max_slew_deg_s / DEG_PER_PIXEL
 
     while True:
-        try:
-            data, _ = sock_rx.recvfrom(65535)
-        except socket.timeout:
+        res = receiver.receive_frame()
+        if res is None:
             continue
+
+        frame_id, data = res
 
         if data == b"STOP":
             print("[*] Node A signaled shutdown.")
@@ -198,8 +201,17 @@ def main():
         cmd_vy = 0.0
 
         if GIMBAL_STATE["auto_track"]:
-            # Autonomous AI Tracking Mode (PID + Kalman Feedforward)
-            cmd_vx, cmd_vy = controller.update(detected_pos, dt)
+            if tracker.loss_frames > 35:
+                # Autonomous Expanding Spiral Re-Acquisition Scan (IEEE ICSOS 2025 PAT standard)
+                # When lock is broken by blackout or extreme flare, sweep in an expanding spiral
+                scan_t = (tracker.loss_frames - 35) * 0.033
+                scan_radius = min(350.0, 40.0 + scan_t * 60.0)
+                scan_angle = scan_t * 3.5
+                cmd_vx = scan_radius * 3.5 * (-math.sin(scan_angle))
+                cmd_vy = scan_radius * 3.5 * (math.cos(scan_angle))
+            else:
+                # Autonomous AI Tracking Mode (PID + Kalman Feedforward)
+                cmd_vx, cmd_vy = controller.update(detected_pos, dt)
         else:
             # Manual Operator Override Mode
             cmd_vx = GIMBAL_STATE["manual_vx"]

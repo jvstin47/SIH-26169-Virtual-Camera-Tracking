@@ -27,6 +27,7 @@ import cv2
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.core.coordinates import CAMERA_WIDTH_PX, CAMERA_HEIGHT_PX
+from src.core.network import UDPReceiver, UDPSender
 
 class AtmosphericChannelEmulator:
     def __init__(self):
@@ -140,15 +141,19 @@ def main():
     sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     node_b_addr = ("127.0.0.1", 9997)
 
+    receiver = UDPReceiver(sock_rx)
+    sender = UDPSender(sock_tx, node_b_addr)
+
     channel = AtmosphericChannelEmulator()
     t_start = time.time()
     packet_count = 0
 
     while True:
-        try:
-            data, _ = sock_rx.recvfrom(65535)
-        except socket.timeout:
+        res = receiver.receive_frame()
+        if res is None:
             continue
+
+        frame_id, data = res
 
         if data == b"STOP":
             sock_tx.sendto(b"STOP", node_b_addr)
@@ -188,11 +193,7 @@ def main():
         new_meta_json = json.dumps(metadata).encode('utf-8')
         fwd_packet = len(new_meta_json).to_bytes(4, 'big') + new_meta_json + corrupted_bytes
 
-        if len(fwd_packet) < 65000:
-            try:
-                sock_tx.sendto(fwd_packet, node_b_addr)
-            except Exception:
-                pass
+        sender.send_frame(frame_id, fwd_packet)
 
         # -------------------------------------------------------------
         # Channel Monitor HUD (Terminal 2 Display)
