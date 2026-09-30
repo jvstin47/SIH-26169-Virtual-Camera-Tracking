@@ -153,13 +153,134 @@ def main():
 
         udp_sender.send_frame(frame_id, packet)
 
-        # Terminal 1 Display
-        cv2.putText(degraded, f"NODE A: SATELLITE BEACON TRANSMITTER (FRAME {frame_id})", (20, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (220, 225, 235), 1)
-        cv2.putText(degraded, f"TARGET GLOBAL: ({pos_x:.1f}, {pos_y:.1f}) | GIMBAL CAM: ({cam_x:.1f}, {cam_y:.1f})", (20, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.40, (0, 255, 255), 1)
+        # -------------------------------------------------------------
+        # Terminal 1 Display: Global Universe Radar Cockpit (2000x2000)
+        # -------------------------------------------------------------
+        radar_size = 600
+        scale = radar_size / float(UNIVERSE_WIDTH_PX) # 0.3x scaling
+        
+        # Canvas: 600x600 universe radar on left + 280x600 telemetry panel on right
+        display_w = radar_size + 280
+        display_h = radar_size
+        hud = np.zeros((display_h, display_w, 3), dtype=np.uint8)
+        hud[:] = (11, 15, 23) # Dark space background
 
-        cv2.imshow("Node A: Remote Satellite / Target Beacon (Terminal 1)", degraded)
+        # 1. Draw Tactical Universe Radar Grid
+        radar_view = hud[:, :radar_size]
+        radar_view[:] = (8, 12, 18)
+
+        # Minor Grid Lines (every 100 px in universe = 30 px on radar)
+        for g in range(0, radar_size, int(100 * scale)):
+            cv2.line(radar_view, (g, 0), (g, radar_size), (20, 28, 40), 1)
+            cv2.line(radar_view, (0, g), (radar_size, g), (20, 28, 40), 1)
+
+        # Major Grid Lines (every 500 px in universe = 150 px on radar)
+        for g in range(0, radar_size + 1, int(500 * scale)):
+            cv2.line(radar_view, (g, 0), (g, radar_size), (40, 58, 80), 1)
+            cv2.line(radar_view, (0, g), (radar_size, g), (40, 58, 80), 1)
+
+        # Range Rings from Center (radius: 250, 500, 750 px in universe)
+        radar_center = (int(radar_size / 2), int(radar_size / 2))
+        for r_ring in [250, 500, 750]:
+            cv2.circle(radar_view, radar_center, int(r_ring * scale), (30, 45, 65), 1)
+
+        # Center Crosshair
+        cx, cy = radar_center
+        cv2.line(radar_view, (cx - 10, cy), (cx + 10, cy), (0, 180, 255), 1)
+        cv2.line(radar_view, (cx, cy - 10), (cx, cy + 10), (0, 180, 255), 1)
+
+        # Coordinate Axis Tick Labels
+        coord_ticks = [(0, "0"), (500, "500"), (1000, "1000"), (1500, "1500"), (2000, "2000")]
+        for px_val, lbl in coord_ticks:
+            pos = int(px_val * scale)
+            if pos < radar_size - 10:
+                cv2.putText(radar_view, lbl, (max(5, pos - 12), radar_size - 6),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.32, (100, 125, 155), 1)
+                if pos > 10:
+                    cv2.putText(radar_view, lbl, (6, max(15, pos + 4)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.32, (100, 125, 155), 1)
+
+        # 2. Draw Target Trajectory Trail
+        if not hasattr(main, "trail"):
+            main.trail = []
+        main.trail.append((float(pos_x), float(pos_y)))
+        if len(main.trail) > 80:
+            main.trail.pop(0)
+
+        for i in range(1, len(main.trail)):
+            p1 = (int(main.trail[i-1][0] * scale), int(main.trail[i-1][1] * scale))
+            p2 = (int(main.trail[i][0] * scale), int(main.trail[i][1] * scale))
+            alpha = i / len(main.trail)
+            trail_col = (int(140 * alpha), int(80 * alpha), int(220 * alpha))
+            cv2.line(radar_view, p1, p2, trail_col, 1)
+
+        # 3. Draw Ground Station Camera Viewport Bounding Box (Node B FOV)
+        cam_top_left = (int((cam_x - CAMERA_WIDTH_PX / 2.0) * scale),
+                        int((cam_y - CAMERA_HEIGHT_PX / 2.0) * scale))
+        cam_bot_right = (int((cam_x + CAMERA_WIDTH_PX / 2.0) * scale),
+                         int((cam_y + CAMERA_HEIGHT_PX / 2.0) * scale))
+        cv2.rectangle(radar_view, cam_top_left, cam_bot_right, (0, 165, 255), 2)
+        # Center cross on camera box
+        cam_center_m = (int(cam_x * scale), int(cam_y * scale))
+        cv2.circle(radar_view, cam_center_m, 2, (0, 165, 255), -1)
+        cv2.putText(radar_view, "NODE B FOV (640x480)", (cam_top_left[0] + 4, max(14, cam_top_left[1] - 4)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.32, (0, 165, 255), 1)
+
+        # 4. Draw Satellite Beacon Marker & Velocity Vector
+        sat_pos_m = (int(pos_x * scale), int(pos_y * scale))
+        cv2.circle(radar_view, sat_pos_m, 6, (0, 255, 255), -1) # Yellow core
+        cv2.circle(radar_view, sat_pos_m, 12, (0, 220, 255), 1) # Halo
+        vel_tip = (int((pos_x + vx * 0.8) * scale), int((pos_y + vy * 0.8) * scale))
+        cv2.arrowedLine(radar_view, sat_pos_m, vel_tip, (0, 255, 120), 1, tipLength=0.3)
+        cv2.putText(radar_view, "SATELLITE", (sat_pos_m[0] + 14, sat_pos_m[1] + 4),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0, 255, 255), 1)
+
+        # Radar Outer Border
+        cv2.rectangle(radar_view, (0, 0), (radar_size - 1, radar_size - 1), (60, 85, 115), 2)
+
+        # 5. Right Column: Telemetry & Beacon Preview
+        panel_x = radar_size + 15
+        cv2.putText(hud, "NODE A: SATELLITE TRANSMITTER", (panel_x, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.44, (220, 225, 235), 1)
+        cv2.putText(hud, "GLOBAL UNIVERSE (2000x2000)", (panel_x, 48),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0, 200, 255), 1)
+
+        # Optical Crop Thumbnail Preview (Transmitted Beacon)
+        thumb_h, thumb_w = 120, 160
+        thumb = cv2.resize(degraded, (thumb_w, thumb_h))
+        thumb_bgr = cv2.cvtColor(thumb, cv2.COLOR_GRAY2BGR) if len(thumb.shape) == 2 else thumb
+        cv2.rectangle(thumb_bgr, (0, 0), (thumb_w - 1, thumb_h - 1), (0, 180, 255), 1)
+        hud[70:70+thumb_h, panel_x:panel_x+thumb_w] = thumb_bgr
+        cv2.putText(hud, "OPTICAL BEACON FEED", (panel_x, 65),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.32, (150, 165, 185), 1)
+
+        # Kinematic & Link Telemetry
+        ty = 220
+        cv2.putText(hud, f"FRAME ID   : {frame_id}", (panel_x, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (200, 205, 215), 1)
+        cv2.putText(hud, f"GLOBAL X   : {pos_x:6.1f} px", (panel_x, ty + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (0, 255, 255), 1)
+        cv2.putText(hud, f"GLOBAL Y   : {pos_y:6.1f} px", (panel_x, ty + 44), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (0, 255, 255), 1)
+        cv2.putText(hud, f"VELOCITY   : ({vx:+4.1f}, {vy:+4.1f})", (panel_x, ty + 66), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (200, 205, 215), 1)
+        cv2.putText(hud, f"CAM POS    : ({cam_x:6.1f}, {cam_y:6.1f})", (panel_x, ty + 88), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (0, 165, 255), 1)
+
+        in_fov = (0 <= local_x < CAMERA_WIDTH_PX and 0 <= local_y < CAMERA_HEIGHT_PX)
+        fov_col = (0, 230, 115) if in_fov else (0, 140, 255)
+        fov_txt = "INSIDE CAM FOV (TRACKING)" if in_fov else "OUT OF FOV (SWEEPING)"
+        cv2.putText(hud, f"LINK STATUS: {fov_txt}", (panel_x, ty + 115), cv2.FONT_HERSHEY_SIMPLEX, 0.34, fov_col, 1)
+
+        # Environmental Toggles Status
+        dy = 375
+        def tcol(flag): return (0, 230, 115) if flag else (90, 95, 105)
+        cv2.putText(hud, f"[1] 10% S&P NOISE  : {'ACTIVE' if optics.enable_salt_and_pepper else 'OFF'}", (panel_x, dy), cv2.FONT_HERSHEY_SIMPLEX, 0.34, tcol(optics.enable_salt_and_pepper), 1)
+        cv2.putText(hud, f"[3] FOG ATTENUATION: {'ACTIVE' if optics.enable_fog else 'OFF'}", (panel_x, dy + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.34, tcol(optics.enable_fog), 1)
+        cv2.putText(hud, f"[4] PLATFORM JITTER: {'ACTIVE' if optics.enable_jitter else 'OFF'}", (panel_x, dy + 44), cv2.FONT_HERSHEY_SIMPLEX, 0.34, tcol(optics.enable_jitter), 1)
+
+        # Interactive Controls Guide
+        cv2.putText(hud, "KEYBOARD CONTROLS:", (panel_x, 480), cv2.FONT_HERSHEY_SIMPLEX, 0.36, (0, 190, 255), 1)
+        cv2.putText(hud, "  [1/3/4] Toggle Disturbances", (panel_x, 502), cv2.FONT_HERSHEY_SIMPLEX, 0.32, (150, 160, 175), 1)
+        cv2.putText(hud, "  [Space] Evasive Maneuver Jump", (panel_x, 522), cv2.FONT_HERSHEY_SIMPLEX, 0.32, (150, 160, 175), 1)
+        cv2.putText(hud, "  [Q/ESC] Quit Node A", (panel_x, 542), cv2.FONT_HERSHEY_SIMPLEX, 0.32, (150, 160, 175), 1)
+
+        cv2.imshow("Node A: Global Universe (2000x2000) & Satellite Transmitter (Terminal 1)", hud)
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q') or key == 27:
             break

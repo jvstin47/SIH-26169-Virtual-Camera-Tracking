@@ -232,32 +232,58 @@ class PhoenixXSimulator:
         minimap_size = 360
         scale = minimap_size / float(UNIVERSE_WIDTH_PX)
         minimap = np.zeros((minimap_size, minimap_size, 3), dtype=np.uint8)
-        minimap[:] = (10, 12, 16)
+        minimap[:] = (8, 12, 18)
         
-        # Draw grid lines
-        for g in range(0, minimap_size, 60):
-            cv2.line(minimap, (g, 0), (g, minimap_size), (25, 30, 40), 1)
-            cv2.line(minimap, (0, g), (minimap_size, g), (25, 30, 40), 1)
+        # Draw Minor Grid Lines (every 250 px in universe = 45 px on minimap)
+        for g in range(0, minimap_size, int(250 * scale)):
+            cv2.line(minimap, (g, 0), (g, minimap_size), (22, 32, 45), 1)
+            cv2.line(minimap, (0, g), (minimap_size, g), (22, 32, 45), 1)
+
+        # Draw Major Grid Lines (every 500 px in universe = 90 px on minimap)
+        for g in range(0, minimap_size + 1, int(500 * scale)):
+            cv2.line(minimap, (g, 0), (g, minimap_size), (40, 58, 80), 1)
+            cv2.line(minimap, (0, g), (minimap_size, g), (40, 58, 80), 1)
+
+        # Draw Range Rings from Center (radius: 250, 500, 750 px in universe)
+        center_m = (int(minimap_size / 2), int(minimap_size / 2))
+        for r_ring in [250, 500, 750]:
+            cv2.circle(minimap, center_m, int(r_ring * scale), (28, 42, 60), 1)
+
+        # Center Crosshair
+        cx_m, cy_m = center_m
+        cv2.line(minimap, (cx_m - 8, cy_m), (cx_m + 8, cy_m), (0, 180, 255), 1)
+        cv2.line(minimap, (cx_m, cy_m - 8), (cx_m, cy_m + 8), (0, 180, 255), 1)
+
+        # Coordinate Axis Ticks
+        for px_val in [500, 1000, 1500]:
+            g_pos = int(px_val * scale)
+            cv2.putText(minimap, str(px_val), (g_pos - 10, minimap_size - 4),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.28, (80, 105, 135), 1)
+            cv2.putText(minimap, str(px_val), (3, g_pos + 4),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.28, (80, 105, 135), 1)
             
         # Draw trajectory trail
         for p1, p2 in zip(trail[:-1], trail[1:]):
             m1 = (int(p1[0] * scale), int(p1[1] * scale))
             m2 = (int(p2[0] * scale), int(p2[1] * scale))
-            cv2.line(minimap, m1, m2, (70, 50, 140), 1)
+            cv2.line(minimap, m1, m2, (100, 70, 200), 1)
             
         # Draw camera FOV box in universe
         cam_top_left = (int((self.camera.x - CAMERA_WIDTH_PX/2) * scale),
                         int((self.camera.y - CAMERA_HEIGHT_PX/2) * scale))
         cam_bot_right = (int((self.camera.x + CAMERA_WIDTH_PX/2) * scale),
                          int((self.camera.y + CAMERA_HEIGHT_PX/2) * scale))
-        cv2.rectangle(minimap, cam_top_left, cam_bot_right, (0, 180, 255), 1)
+        cv2.rectangle(minimap, cam_top_left, cam_bot_right, (0, 180, 255), 2)
+        cv2.putText(minimap, "FOV", (cam_top_left[0] + 3, max(12, cam_top_left[1] - 3)),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.28, (0, 180, 255), 1)
         
         # Draw true target spot on minimap
         if trail:
             cur_tgt = (int(trail[-1][0] * scale), int(trail[-1][1] * scale))
-            cv2.circle(minimap, cur_tgt, 4, (0, 255, 255), -1)
+            cv2.circle(minimap, cur_tgt, 5, (0, 255, 255), -1)
+            cv2.circle(minimap, cur_tgt, 9, (0, 200, 255), 1)
             
-        cv2.rectangle(minimap, (0, 0), (minimap_size - 1, minimap_size - 1), (70, 85, 105), 1)
+        cv2.rectangle(minimap, (0, 0), (minimap_size - 1, minimap_size - 1), (70, 95, 125), 1)
         canvas[40:400, 30:390] = minimap
 
         # -------------------------------------------------------------

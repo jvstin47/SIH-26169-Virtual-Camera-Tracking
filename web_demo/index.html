@@ -378,17 +378,55 @@
       uCtx.fillStyle = '#0a0d12';
       uCtx.fillRect(0, 0, w, h);
 
-      // Grid
-      uCtx.strokeStyle = '#161e2e';
+      // Minor Grid (every 250 px in universe = 45 px)
+      uCtx.strokeStyle = '#151d2a';
       uCtx.lineWidth = 1;
-      for (let x = 0; x < w; x += 36) {
+      const stepMinor = 250 * s;
+      for (let x = 0; x <= w; x += stepMinor) {
         uCtx.beginPath(); uCtx.moveTo(x, 0); uCtx.lineTo(x, h); uCtx.stroke();
         uCtx.beginPath(); uCtx.moveTo(0, x); uCtx.lineTo(w, x); uCtx.stroke();
       }
 
+      // Major Grid (every 500 px in universe = 90 px)
+      uCtx.strokeStyle = '#25354c';
+      uCtx.lineWidth = 1;
+      const stepMajor = 500 * s;
+      for (let x = 0; x <= w; x += stepMajor) {
+        uCtx.beginPath(); uCtx.moveTo(x, 0); uCtx.lineTo(x, h); uCtx.stroke();
+        uCtx.beginPath(); uCtx.moveTo(0, x); uCtx.lineTo(w, x); uCtx.stroke();
+      }
+
+      // Concentric Range Rings from Center
+      const uCx = w / 2;
+      const uCy = h / 2;
+      uCtx.strokeStyle = '#1e2b3e';
+      uCtx.lineWidth = 1;
+      [250, 500, 750].forEach(r => {
+        uCtx.beginPath();
+        uCtx.arc(uCx, uCy, r * s, 0, 2 * Math.PI);
+        uCtx.stroke();
+      });
+
+      // Center Crosshair
+      uCtx.strokeStyle = '#38bdf8';
+      uCtx.lineWidth = 1;
+      uCtx.beginPath();
+      uCtx.moveTo(uCx - 6, uCy); uCtx.lineTo(uCx + 6, uCy);
+      uCtx.moveTo(uCx, uCy - 6); uCtx.lineTo(uCx, uCy + 6);
+      uCtx.stroke();
+
+      // Coordinate Labels
+      uCtx.fillStyle = '#475569';
+      uCtx.font = '9px monospace';
+      [500, 1000, 1500].forEach(v => {
+        const p = v * s;
+        uCtx.fillText(v.toString(), p - 10, h - 3);
+        uCtx.fillText(v.toString(), 3, p + 3);
+      });
+
       // Trail
       if (trail.length > 1) {
-        uCtx.strokeStyle = '#6366f1';
+        uCtx.strokeStyle = '#818cf8';
         uCtx.lineWidth = 1.5;
         uCtx.beginPath();
         uCtx.moveTo(trail[0].x * s, trail[0].y * s);
@@ -401,8 +439,10 @@
       // Target Spot
       uCtx.fillStyle = '#38bdf8';
       uCtx.beginPath();
-      uCtx.arc(target.x * s, target.y * s, 3.5, 0, 2 * Math.PI);
+      uCtx.arc(target.x * s, target.y * s, 4, 0, 2 * Math.PI);
       uCtx.fill();
+      uCtx.strokeStyle = '#0284c7';
+      uCtx.stroke();
 
       // Camera Viewport Bounding Box
       const camL = (cameraX - CAM_WIDTH / 2) * s;
@@ -413,6 +453,8 @@
       uCtx.strokeStyle = '#f59e0b';
       uCtx.lineWidth = 1.5;
       uCtx.strokeRect(camL, camT, camW, camH);
+      uCtx.fillStyle = '#f59e0b';
+      uCtx.fillText("FOV 640x480", camL + 3, Math.max(10, camT - 2));
     }
 
     // --- Render Camera Feed ---
