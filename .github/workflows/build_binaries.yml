@@ -1,0 +1,121 @@
+name: Build & Release Multi-Platform Binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. macOS Build (Builds .app and packages into .dmg)
+  # ---------------------------------------------------------------------------
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller pillow
+
+      - name: Generate App Icons
+        run: |
+          python scripts/create_icons.py
+
+      - name: Build macOS Application Bundle
+        run: |
+          pyinstaller PhoenixX.spec --clean --noconfirm
+
+      - name: Package into DMG
+        run: |
+          mkdir -p dmg_root
+          cp -r dist/Phoenix-X.app dmg_root/
+          ln -s /Applications dmg_root/Applications
+          hdiutil create -volname "Phoenix-X Installer" \
+                         -srcfolder dmg_root \
+                         -ov -format UDZO Phoenix-X-macOS.dmg
+
+      - name: Upload macOS DMG Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Phoenix-X-macOS-DMG
+          path: Phoenix-X-macOS.dmg
+
+  # ---------------------------------------------------------------------------
+  # 2. Windows Build (Builds standalone .exe and packages into .zip)
+  # ---------------------------------------------------------------------------
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller pillow
+
+      - name: Generate Windows Icon
+        run: |
+          python -c "from PIL import Image; img = Image.open('assets/icon_512.png'); img.save('assets/PhoenixX.ico', format='ICO', sizes=[(16,16), (32,32), (48,48), (64,64), (128,128), (256,256)])"
+
+      - name: Build Windows Application
+        run: |
+          pyinstaller PhoenixX.spec --clean --noconfirm
+
+      - name: Create Windows ZIP Archive
+        run: |
+          Compress-Archive -Path dist/Phoenix-X/* -DestinationPath Phoenix-X-Windows-x64.zip
+
+      - name: Upload Windows ZIP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Phoenix-X-Windows-ZIP
+          path: Phoenix-X-Windows-x64.zip
+
+  # ---------------------------------------------------------------------------
+  # 3. Create GitHub Release (If triggered by git tag)
+  # ---------------------------------------------------------------------------
+  create-release:
+    needs: [build-macos, build-windows]
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download macOS Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Phoenix-X-macOS-DMG
+
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: Phoenix-X-Windows-ZIP
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            Phoenix-X-macOS.dmg
+            Phoenix-X-Windows-x64.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true

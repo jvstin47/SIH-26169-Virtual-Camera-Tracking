@@ -37,3 +37,5 @@ wheels/
 logs/
 *.log
 output_reports/
+*.dmg
+*.zip

@@ -26,8 +26,29 @@ import urllib.parse
 from datetime import datetime
 
 # Workspace root
-WORKSPACE_DIR = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, 'frozen', False):
+    WORKSPACE_DIR = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+else:
+    WORKSPACE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, WORKSPACE_DIR)
+
+# Handle node dispatch if invoked as a child process of a packaged binary
+if "--node" in sys.argv:
+    idx = sys.argv.index("--node")
+    node_name = sys.argv[idx + 1]
+    del sys.argv[idx:idx+2]
+    if node_name == "tracker":
+        from distributed_demo import ground_tracker
+        ground_tracker.main()
+        sys.exit(0)
+    elif node_name == "channel":
+        from distributed_demo import atmospheric_channel
+        atmospheric_channel.main()
+        sys.exit(0)
+    elif node_name == "satellite":
+        from distributed_demo import target_satellite
+        target_satellite.main()
+        sys.exit(0)
 
 import cv2
 import numpy as np
@@ -309,17 +330,46 @@ def launch_all(headless: bool = False, open_browser: bool = True, http_port: int
 
     # Build node command arguments
     py_exec = sys.executable
+    is_frozen = getattr(sys, 'frozen', False)
     gui_arg = ["--headless"] if headless else []
 
     # 3. Launch Node C Ground Tracker first (starts listening on 9997)
-    cmd_track = [
-        py_exec, "distributed_demo/ground_tracker.py",
-        "--port", "9997",
-        "--stream-port", "9983",
-        "--telemetry-port", "9984",
-        "--cmd-port", "9995",
-        "--no-http"
-    ] + gui_arg
+    if is_frozen:
+        cmd_track = [py_exec, "--node", "tracker",
+            "--port", "9997",
+            "--stream-port", "9983",
+            "--telemetry-port", "9984",
+            "--cmd-port", "9995",
+            "--no-http"
+        ] + gui_arg
+        cmd_chan = [py_exec, "--node", "channel",
+            "--stream-port", "9982",
+            "--cmd-port", "9996"
+        ] + gui_arg
+        cmd_sat = [py_exec, "--node", "satellite",
+            "--port", "9999",
+            "--stream-port", "9981"
+        ] + gui_arg
+    else:
+        cmd_track = [
+            py_exec, os.path.join(WORKSPACE_DIR, "distributed_demo/ground_tracker.py"),
+            "--port", "9997",
+            "--stream-port", "9983",
+            "--telemetry-port", "9984",
+            "--cmd-port", "9995",
+            "--no-http"
+        ] + gui_arg
+        cmd_chan = [
+            py_exec, os.path.join(WORKSPACE_DIR, "distributed_demo/atmospheric_channel.py"),
+            "--stream-port", "9982",
+            "--cmd-port", "9996"
+        ] + gui_arg
+        cmd_sat = [
+            py_exec, os.path.join(WORKSPACE_DIR, "distributed_demo/target_satellite.py"),
+            "--port", "9999",
+            "--stream-port", "9981"
+        ] + gui_arg
+
     proc_track = subprocess.Popen(
         cmd_track, cwd=WORKSPACE_DIR,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
@@ -328,11 +378,6 @@ def launch_all(headless: bool = False, open_browser: bool = True, http_port: int
     time.sleep(0.4)
 
     # 4. Launch Node B Active Atmospheric Channel (listens on 9999, forwards to 9997)
-    cmd_chan = [
-        py_exec, "distributed_demo/atmospheric_channel.py",
-        "--stream-port", "9982",
-        "--cmd-port", "9996"
-    ] + gui_arg
     proc_chan = subprocess.Popen(
         cmd_chan, cwd=WORKSPACE_DIR,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
@@ -341,11 +386,6 @@ def launch_all(headless: bool = False, open_browser: bool = True, http_port: int
     time.sleep(0.4)
 
     # 5. Launch Node A Satellite Transmitter (broadcasts to 9999)
-    cmd_sat = [
-        py_exec, "distributed_demo/target_satellite.py",
-        "--port", "9999",
-        "--stream-port", "9981"
-    ] + gui_arg
     proc_sat = subprocess.Popen(
         cmd_sat, cwd=WORKSPACE_DIR,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1
