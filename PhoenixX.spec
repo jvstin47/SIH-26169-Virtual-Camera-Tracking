@@ -15,6 +15,7 @@ added_datas = [
     ('distributed_demo', 'distributed_demo'),
     ('src', 'src'),
     ('assets', 'assets'),
+    ('models', 'models'),  # AI model weights (ONNX / PTH / MLX)
 ]
 
 a = Analysis(
@@ -25,12 +26,27 @@ a = Analysis(
     hiddenimports=[
         'cv2',
         'numpy',
+        # Core
         'src.core.coordinates',
         'src.core.network',
+        # Optics & Atmosphere
         'src.optics.atmosphere_and_noise',
+        # Vision pipeline
         'src.vision.tracker',
+        'src.vision.deep_saliency_net',
+        'src.vision.beacon_onnx_model',
+        'src.vision.beacon_mlx_model',
+        # Control
         'src.control.gimbal_controller',
+        # Camera
         'src.camera.ptz_camera',
+        # Simulation
+        'src.simulation.trajectories',
+        'src.simulation.orbital_propagator',
+        # Benchmarking & Experiments
+        'src.benchmarking.mp4_bypass',
+        'src.experiments.scientific_benchmark',
+        # Distributed demo nodes
         'distributed_demo.ground_tracker',
         'distributed_demo.atmospheric_channel',
         'distributed_demo.target_satellite',
@@ -38,7 +54,12 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['matplotlib', 'torch', 'scipy', 'IPython', 'pandas', 'streamlit'],
+    excludes=[
+        'matplotlib', 'torch', 'torchvision', 'torchaudio',
+        'scipy', 'IPython', 'pandas', 'streamlit',
+        'tensorflow', 'keras', 'sklearn', 'onnxruntime',
+        'PIL', 'Pillow', 'tkinter',
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -88,6 +109,9 @@ if sys.platform == 'darwin':
             'CFBundleVersion': '1.0.0',
             'NSHighResolutionCapable': True,
             'LSMinimumSystemVersion': '11.0',
-            'NSHumanReadableCopyright': 'Phoenix-X Team © 2026 (SIH 26169)',
+            'NSHumanReadableCopyright': 'Phoenix-X Team \u00a9 2026 (SIH 26169)',
+            # macOS privacy strings (required for OpenCV camera/display access)
+            'NSCameraUsageDescription': 'Phoenix-X requires camera access for live optical beacon tracking via the virtual PTZ sensor pipeline.',
+            'NSMicrophoneUsageDescription': 'Not used by Phoenix-X.',
         },
     )
