@@ -198,7 +198,11 @@ class MasterUnifiedHandler(http.server.SimpleHTTPRequestHandler):
             
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             if target == "satellite":
-                sock.sendto(json.dumps({"cmd": action}).encode('utf-8'), ("127.0.0.1", 9998))
+                msg = {"cmd": action}
+                if "x" in qs and "y" in qs:
+                    msg["x"] = float(qs["x"][0])
+                    msg["y"] = float(qs["y"][0])
+                sock.sendto(json.dumps(msg).encode('utf-8'), ("127.0.0.1", 9998))
                 append_log("MASTER", f"Dispatched to Satellite: {action}")
             elif target == "channel":
                 sock.sendto(json.dumps({"action": action}).encode('utf-8'), ("127.0.0.1", 9996))

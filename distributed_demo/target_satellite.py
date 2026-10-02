@@ -45,7 +45,7 @@ def ptz_listener():
             if "cam_y" in msg:
                 CAM_STATE["cam_y"] = float(msg.get("cam_y", CAM_STATE["cam_y"]))
             if "cmd" in msg:
-                REMOTE_COMMANDS.append(msg["cmd"])
+                REMOTE_COMMANDS.append(msg)
         except Exception:
             continue
     sock_rx.close()
@@ -294,10 +294,30 @@ def main():
         # Process remote web commands
         while REMOTE_COMMANDS:
             rcmd = REMOTE_COMMANDS.pop(0)
+            if isinstance(rcmd, dict):
+                cmd_type = rcmd.get("cmd")
+                if cmd_type == "goto":
+                    pos_x = float(rcmd.get("x", pos_x))
+                    pos_y = float(rcmd.get("y", pos_y))
+                    print(f"[*] Node A: Commanded Map GOTO -> Pos: ({pos_x:.1f}, {pos_y:.1f})")
+                rcmd = cmd_type
+
             if rcmd == "evasive":
                 vx = np.random.choice([-1, 1]) * 80.0
                 vy = np.random.choice([-1, 1]) * 80.0
                 print(f"[!] Node A: Remote Evasive Jump -> Vel: ({vx:.1f}, {vy:.1f})")
+            elif rcmd in ("steer_up", "steer_north"):
+                vy = max(-85.0, vy - 45.0)
+                print(f"[*] Node A: Steer North -> Vel: ({vx:.1f}, {vy:.1f})")
+            elif rcmd in ("steer_down", "steer_south"):
+                vy = min(85.0, vy + 45.0)
+                print(f"[*] Node A: Steer South -> Vel: ({vx:.1f}, {vy:.1f})")
+            elif rcmd in ("steer_left", "steer_west"):
+                vx = max(-85.0, vx - 45.0)
+                print(f"[*] Node A: Steer West -> Vel: ({vx:.1f}, {vy:.1f})")
+            elif rcmd in ("steer_right", "steer_east"):
+                vx = min(85.0, vx + 45.0)
+                print(f"[*] Node A: Steer East -> Vel: ({vx:.1f}, {vy:.1f})")
             elif rcmd == "toggle_noise":
                 optics.enable_salt_and_pepper = not optics.enable_salt_and_pepper
                 print(f"[*] Node A: Remote 10% S&P Noise -> {optics.enable_salt_and_pepper}")

@@ -49,5 +49,37 @@ class TestUnifiedApp(unittest.TestCase):
         data = json.loads(req.read().decode('utf-8'))
         self.assertEqual(data.get("status"), "ok")
 
+    def test_satellite_goto_and_steer_controls(self):
+        # Test Map Click GOTO
+        url_goto = f"http://127.0.0.1:{self.test_port}/control?target=satellite&action=goto&x=1350&y=850"
+        req = urllib.request.urlopen(url_goto)
+        self.assertEqual(req.status, 200)
+        data = json.loads(req.read().decode('utf-8'))
+        self.assertEqual(data.get("status"), "ok")
+
+        # Test Directional Steering (I, K, J, L)
+        for steer_cmd in ["steer_up", "steer_down", "steer_left", "steer_right", "evasive"]:
+            url_steer = f"http://127.0.0.1:{self.test_port}/control?target=satellite&action={steer_cmd}"
+            req = urllib.request.urlopen(url_steer)
+            self.assertEqual(req.status, 200)
+
+    def test_channel_disturbances_controls(self):
+        # Test Channel 1-5 Actions
+        for action in ["step_noise", "toggle_turbulence", "toggle_fog", "glare", "blackout"]:
+            url_chan = f"http://127.0.0.1:{self.test_port}/control?target=channel&action={action}"
+            req = urllib.request.urlopen(url_chan)
+            self.assertEqual(req.status, 200)
+            data = json.loads(req.read().decode('utf-8'))
+            self.assertEqual(data.get("status"), "ok")
+
+    def test_ground_tracker_ptz_controls(self):
+        # Test Tracker WASD commands
+        for cmd in ["pan_left", "pan_right", "tilt_up", "tilt_down", "toggle_auto", "recenter"]:
+            url_ptz = f"http://127.0.0.1:{self.test_port}/ptz?cmd={cmd}"
+            req = urllib.request.urlopen(url_ptz)
+            self.assertEqual(req.status, 200)
+            data = json.loads(req.read().decode('utf-8'))
+            self.assertEqual(data.get("status"), "ok")
+
 if __name__ == "__main__":
     unittest.main()

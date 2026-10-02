@@ -57,6 +57,9 @@
 
     <!-- View Modes & Emergency Stop -->
     <div class="flex items-center gap-2">
+      <button onclick="toggleHotkeyModal()" class="text-xs px-2.5 py-1.5 rounded-lg font-semibold bg-gray-900 hover:bg-gray-800 text-sky-400 border border-gray-800 hover:border-sky-700 transition flex items-center gap-1.5 shadow-sm" title="Show keyboard shortcuts reference">
+        <span>⌨️</span> Hotkeys
+      </button>
       <div class="flex rounded-lg bg-gray-900 p-0.5 border border-gray-800 text-xs">
         <button id="btn-view-matrix" onclick="switchView('matrix')" class="px-3 py-1 rounded-md font-semibold bg-sky-600 text-white transition">3-Node Matrix</button>
         <button id="btn-view-3d" onclick="switchView('3d')" class="px-3 py-1 rounded-md font-semibold text-gray-400 hover:text-white transition">3D Orbit WebGL</button>
@@ -76,56 +79,118 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
       
       <!-- Card 1: Node A Satellite Universe Radar -->
-      <div class="glass-card p-3 flex flex-col">
-        <div class="flex justify-between items-center mb-2">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-sky-400"></span>
-            <span class="text-xs font-bold text-sky-400 uppercase tracking-wide">Terminal 1: Node A Satellite</span>
+      <div class="glass-card p-3 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+              <span class="text-xs font-bold text-sky-400 uppercase tracking-wide">Terminal 1: Node A Satellite</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-sky-950 text-sky-300 border border-sky-800">CLICK RADAR TO GOTO</span>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950 border border-sky-800 text-sky-300">2000x2000</span>
+            </div>
           </div>
-          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950 border border-sky-800 text-sky-300">2000x2000 RADAR</span>
+          <!-- Clickable 2000x2000 Universe Radar Display (880x600 aspect ratio) -->
+          <div id="radar-container" class="feed-container aspect-[880/600] flex items-center justify-center relative cursor-crosshair select-none" onclick="handleRadarClick(event)" onmousemove="handleRadarMouseMove(event)" onmouseleave="handleRadarMouseLeave()">
+            <img id="feed-a" src="/stream/node_a" alt="Node A Feed" class="feed-img pointer-events-none" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%2338bdf8\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Node A (UDP 9999)...</text></svg>'">
+            
+            <!-- Animated Target Ping Reticle (Spawned upon radar click) -->
+            <div id="radar-ping" class="absolute pointer-events-none hidden w-10 h-10 -translate-x-1/2 -translate-y-1/2 border-2 border-sky-400 rounded-full animate-ping z-20"></div>
+            <div id="radar-target-marker" class="absolute pointer-events-none hidden -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center">
+              <div class="w-5 h-5 border border-amber-400 rounded-full flex items-center justify-center shadow-lg shadow-amber-400/50">
+                <div class="w-1.5 h-1.5 bg-amber-400 rounded-full"></div>
+              </div>
+            </div>
+
+            <!-- Live Universe Coordinate Cursor Tooltip -->
+            <div id="radar-cursor-tag" class="absolute pointer-events-none hidden px-1.5 py-0.5 rounded bg-black/85 text-[9px] font-mono text-sky-300 border border-sky-800 -translate-x-1/2 -translate-y-6 z-30 shadow-md"></div>
+
+            <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/80 backdrop-blur-sm border border-gray-800 text-[10px] font-mono text-gray-300 flex items-center gap-1.5 pointer-events-none z-10">
+              <span>POS:</span> <span id="tele-cam-pos" class="text-sky-300 font-bold">1000.0, 1000.0</span>
+            </div>
+            
+            <!-- Dedicated Zoom Viewport Button -->
+            <button onclick="event.stopPropagation(); openLightbox('feed-a', 'Terminal 1: Node A Satellite Radar (2000x2000)')" class="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 hover:bg-black text-[9px] text-gray-300 hover:text-white font-mono border border-gray-700 transition flex items-center gap-1 z-10" title="Inspect enlarged feed">
+              <span>&boxbox;</span> Zoom
+            </button>
+          </div>
         </div>
-        <div class="feed-container aspect-[4/3] flex items-center justify-center" onclick="openLightbox('feed-a', 'Terminal 1: Node A Satellite Radar (2000x2000)')">
-          <img id="feed-a" src="/stream/node_a" alt="Node A Feed" class="feed-img" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%2338bdf8\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Node A (UDP 9999)...</text></svg>'">
-          <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-sm border border-gray-800 text-[10px] font-mono text-gray-300">
-            RADAR: <span id="tele-cam-pos">1000.0, 1000.0</span>
+
+        <!-- Satellite Directional Steering Pad & Evasive Jump -->
+        <div class="mt-2 pt-2 border-t border-gray-800/80 flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
+          <div class="flex items-center gap-1">
+            <span class="text-gray-400 font-semibold uppercase text-[10px] mr-0.5">Steer Sat:</span>
+            <button id="btn-sat-w" onclick="sendControl('satellite', 'steer_left')" class="px-2 py-0.5 rounded bg-gray-900 hover:bg-sky-950 border border-gray-800 hover:border-sky-800 text-sky-400 font-mono text-[10px] transition active:scale-95" title="Hotkey: J (Steer West)">
+              <span class="text-gray-500 font-bold">[J]</span> &larr; W
+            </button>
+            <div class="flex flex-col gap-0.5">
+              <button id="btn-sat-n" onclick="sendControl('satellite', 'steer_up')" class="px-2 py-0.5 rounded bg-gray-900 hover:bg-sky-950 border border-gray-800 hover:border-sky-800 text-sky-400 font-mono text-[10px] transition active:scale-95" title="Hotkey: I (Steer North)">
+                <span class="text-gray-500 font-bold">[I]</span> &uarr; N
+              </button>
+              <button id="btn-sat-s" onclick="sendControl('satellite', 'steer_down')" class="px-2 py-0.5 rounded bg-gray-900 hover:bg-sky-950 border border-gray-800 hover:border-sky-800 text-sky-400 font-mono text-[10px] transition active:scale-95" title="Hotkey: K (Steer South)">
+                <span class="text-gray-500 font-bold">[K]</span> &darr; S
+              </button>
+            </div>
+            <button id="btn-sat-e" onclick="sendControl('satellite', 'steer_right')" class="px-2 py-0.5 rounded bg-gray-900 hover:bg-sky-950 border border-gray-800 hover:border-sky-800 text-sky-400 font-mono text-[10px] transition active:scale-95" title="Hotkey: L (Steer East)">
+              E &rarr; <span class="text-gray-500 font-bold">[L]</span>
+            </button>
           </div>
-          <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 text-[9px] text-gray-400 font-mono">Click to zoom</div>
+          <button id="btn-sat-jump" onclick="sendControl('satellite', 'evasive')" class="px-2.5 py-1 rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 font-mono text-[10px] transition font-bold flex items-center gap-1 active:scale-95 shadow-sm" title="Hotkey: Space (High-G Evasive Jump)">
+            <span>⚡ [Space]</span> Jump
+          </button>
         </div>
       </div>
 
       <!-- Card 2: Node B Atmospheric Channel Emulator -->
-      <div class="glass-card p-3 flex flex-col">
-        <div class="flex justify-between items-center mb-2">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-            <span class="text-xs font-bold text-amber-400 uppercase tracking-wide">Terminal 2: Active Channel MitM</span>
+      <div class="glass-card p-3 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+              <span class="text-xs font-bold text-amber-400 uppercase tracking-wide">Terminal 2: Active Channel MitM</span>
+            </div>
+            <span id="badge-channel-status" class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 border border-amber-800 text-amber-300">TURBULENT MEDIUM</span>
           </div>
-          <span id="badge-channel-status" class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 border border-amber-800 text-amber-300">TURBULENT MEDIUM</span>
+          <div class="feed-container aspect-[4/3] flex items-center justify-center relative">
+            <img id="feed-b" src="/stream/node_b" alt="Node B Feed" class="feed-img" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%23fbbf24\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Channel (UDP 9997)...</text></svg>'">
+            <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-sm border border-gray-800 text-[10px] font-mono text-gray-300 flex items-center gap-1.5 pointer-events-none">
+              <span>Cn2: 5e-14</span> &bull; <span id="tele-noise-tag">10% S&amp;P</span>
+            </div>
+            <button onclick="openLightbox('feed-b', 'Terminal 2: Atmospheric Channel (Kolmogorov Turbulence & Shimmer)')" class="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 hover:bg-black text-[9px] text-gray-300 hover:text-white font-mono border border-gray-700 transition flex items-center gap-1" title="Inspect enlarged feed">
+              <span>&boxbox;</span> Zoom
+            </button>
+          </div>
         </div>
-        <div class="feed-container aspect-[4/3] flex items-center justify-center" onclick="openLightbox('feed-b', 'Terminal 2: Atmospheric Channel (Kolmogorov Turbulence & Shimmer)')">
-          <img id="feed-b" src="/stream/node_b" alt="Node B Feed" class="feed-img" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%23fbbf24\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Channel (UDP 9997)...</text></svg>'">
-          <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-sm border border-gray-800 text-[10px] font-mono text-gray-300 flex items-center gap-1.5">
-            <span>Cn2: 5e-14</span> &bull; <span id="tele-noise-tag">10% S&amp;P</span>
-          </div>
-          <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 text-[9px] text-gray-400 font-mono">Click to zoom</div>
+        <div class="mt-2 pt-2 border-t border-gray-800/80 flex items-center justify-between text-[10px] font-mono text-gray-400">
+          <span>HOTKEYS: [1] NOISE &bull; [2] TURB &bull; [3] FOG</span>
+          <span class="text-amber-400 font-bold">[4/5] FLASH/BURST</span>
         </div>
       </div>
 
       <!-- Card 3: Node C Ground Optical Tracker -->
-      <div class="glass-card p-3 flex flex-col">
-        <div class="flex justify-between items-center mb-2">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Terminal 3: Ground Tracker</span>
+      <div class="glass-card p-3 flex flex-col justify-between">
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Terminal 3: Ground Tracker</span>
+            </div>
+            <span id="badge-mode" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300">AUTO-TRACK</span>
           </div>
-          <span id="badge-mode" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300">AUTO-TRACK</span>
+          <div class="feed-container aspect-[4/3] flex items-center justify-center relative">
+            <img id="feed-c" src="/stream/node_c" alt="Node C Feed" class="feed-img" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%2334d399\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Tracker (UDP 9998)...</text></svg>'">
+            <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-sm border border-gray-800 text-[10px] font-mono text-gray-300 pointer-events-none">
+              ERR: <span id="tele-err-arcsec" class="text-emerald-400 font-bold">0.00</span> arcsec
+            </div>
+            <button onclick="openLightbox('feed-c', 'Terminal 3: Ground Optical Sensor (Sub-Pixel Kalman Lock)')" class="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/80 hover:bg-black text-[9px] text-gray-300 hover:text-white font-mono border border-gray-700 transition flex items-center gap-1" title="Inspect enlarged feed">
+              <span>&boxbox;</span> Zoom
+            </button>
+          </div>
         </div>
-        <div class="feed-container aspect-[4/3] flex items-center justify-center" onclick="openLightbox('feed-c', 'Terminal 3: Ground Optical Sensor (Sub-Pixel Kalman Lock)')">
-          <img id="feed-c" src="/stream/node_c" alt="Node C Feed" class="feed-img" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%2334d399\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Tracker (UDP 9998)...</text></svg>'">
-          <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-sm border border-gray-800 text-[10px] font-mono text-gray-300">
-            ERR: <span id="tele-err-arcsec" class="text-emerald-400 font-bold">0.00</span> arcsec
-          </div>
-          <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 text-[9px] text-gray-400 font-mono">Click to zoom</div>
+        <div class="mt-2 pt-2 border-t border-gray-800/80 flex items-center justify-between text-[10px] font-mono text-gray-400">
+          <span>SLEW: [W/A/S/D] OR ARROW KEYS</span>
+          <span class="text-emerald-400 font-bold">[M] AUTO &bull; [R] RESET</span>
         </div>
       </div>
 
@@ -212,61 +277,102 @@
           <div class="mb-3">
             <div class="text-[11px] font-bold text-amber-400 uppercase mb-1.5 flex items-center justify-between">
               <span>Atmospheric Optical Disturbances (Node B)</span>
-              <span class="text-[9px] text-gray-400">Interactive Injection</span>
+              <span class="text-[9px] text-gray-400 font-mono">Hotkeys: 1 - 5</span>
             </div>
             <div class="grid grid-cols-2 gap-1.5 text-xs">
-              <button id="btn-ctrl-turb" onclick="sendControl('channel', 'toggle_turbulence')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition">
-                <span>Turbulence (Kolmogorov)</span>
-                <span id="badge-ctrl-turb" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">ON</span>
+              <button id="btn-ctrl-noise" onclick="sendControl('channel', 'step_noise')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition active:scale-95" title="Hotkey: 1 (Step Impulsive Noise)">
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1.5 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-amber-400 font-bold border border-gray-700">[1]</span>
+                  <span>Impulsive S&amp;P Noise</span>
+                </div>
+                <span id="badge-ctrl-noise" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono font-bold">10% SLA</span>
               </button>
-              <button id="btn-ctrl-fog" onclick="sendControl('channel', 'toggle_fog')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition">
-                <span>Fog (Beer-Lambert)</span>
-                <span id="badge-ctrl-fog" class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">OFF</span>
+              <button id="btn-ctrl-turb" onclick="sendControl('channel', 'toggle_turbulence')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition active:scale-95" title="Hotkey: 2 (Kolmogorov Wavefront Shimmer)">
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1.5 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-amber-400 font-bold border border-gray-700">[2]</span>
+                  <span>Turbulence (Kolmogorov)</span>
+                </div>
+                <span id="badge-ctrl-turb" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono font-bold">ON</span>
               </button>
-              <button id="btn-ctrl-noise" onclick="sendControl('channel', 'step_noise')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition">
-                <span>Impulsive S&amp;P Noise</span>
-                <span id="badge-ctrl-noise" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">10% SLA</span>
+              <button id="btn-ctrl-fog" onclick="sendControl('channel', 'toggle_fog')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition active:scale-95" title="Hotkey: 3 (Beer-Lambert Cloud Fog)">
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1.5 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-amber-400 font-bold border border-gray-700">[3]</span>
+                  <span>Fog (Beer-Lambert)</span>
+                </div>
+                <span id="badge-ctrl-fog" class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700 font-mono">OFF</span>
               </button>
-              <button onclick="sendControl('channel', 'glare')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition">
-                <span>Solar Glare Flash</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">TRIGGER</span>
+              <button id="btn-ctrl-glare" onclick="sendControl('channel', 'glare')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition active:scale-95" title="Hotkey: 4 (Solar Glare Flare)">
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1.5 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-amber-400 font-bold border border-gray-700">[4]</span>
+                  <span>Solar Glare Flash</span>
+                </div>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono font-bold">TRIGGER</span>
               </button>
-              <button onclick="sendControl('channel', 'blackout')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-red-700/60 font-medium text-left col-span-2 flex items-center justify-between transition">
-                <span>Scintillation Fading Dropout (Optical Blackout)</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">1s BURST</span>
+              <button id="btn-ctrl-blackout" onclick="sendControl('channel', 'blackout')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-red-700/60 font-medium text-left col-span-2 flex items-center justify-between transition active:scale-95" title="Hotkey: 5 (Scintillation Dropout 1s Burst)">
+                <div class="flex items-center gap-1.5">
+                  <span class="px-1.5 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-red-400 font-bold border border-gray-700">[5]</span>
+                  <span>Scintillation Fading Dropout (Optical Blackout)</span>
+                </div>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-950 text-red-400 border border-red-800 font-mono font-bold">1s BURST</span>
               </button>
             </div>
           </div>
 
           <!-- Section 2: Satellite Dynamics -->
           <div class="mb-3">
-            <div class="text-[11px] font-bold text-sky-400 uppercase mb-1.5">Satellite Kinematics (Node A)</div>
-            <div class="flex gap-2 text-xs">
-              <button onclick="sendControl('satellite', 'evasive')" class="flex-1 p-2 rounded bg-sky-950/60 hover:bg-sky-900/60 border border-sky-800 font-bold text-sky-300 transition flex items-center justify-center gap-1.5 shadow-sm">
-                <span>⚡</span> Trigger High-G Evasive Maneuver Jump
+            <div class="text-[11px] font-bold text-sky-400 uppercase mb-1.5 flex items-center justify-between">
+              <span>Satellite Kinematics (Node A)</span>
+              <span class="text-[9px] text-gray-400 font-mono">Map Click &bull; I, J, K, L &bull; Space</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1.5 text-xs">
+              <button id="btn-sat-evasive-master" onclick="sendControl('satellite', 'evasive')" class="col-span-2 p-2 rounded bg-sky-950/60 hover:bg-sky-900/60 border border-sky-800 font-bold text-sky-300 transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95" title="Hotkey: Space">
+                <span>⚡</span> Trigger High-G Evasive Maneuver Jump <span class="text-sky-400 font-mono text-[10px] ml-1 font-bold">[Space]</span>
+              </button>
+              <button onclick="sendControl('satellite', 'steer_up')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sky-400 font-mono text-[11px] text-center transition active:scale-95" title="Hotkey: I">
+                <span class="font-bold">[I]</span> &uarr; North (+Vy)
+              </button>
+              <button onclick="sendControl('satellite', 'steer_down')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sky-400 font-mono text-[11px] text-center transition active:scale-95" title="Hotkey: K">
+                <span class="font-bold">[K]</span> &darr; South (-Vy)
+              </button>
+              <button onclick="sendControl('satellite', 'steer_left')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sky-400 font-mono text-[11px] text-center transition active:scale-95" title="Hotkey: J">
+                <span class="font-bold">[J]</span> &larr; West (-Vx)
+              </button>
+              <button onclick="sendControl('satellite', 'steer_right')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sky-400 font-mono text-[11px] text-center transition active:scale-95" title="Hotkey: L">
+                East &rarr; <span class="font-bold">[L]</span> (+Vx)
               </button>
             </div>
           </div>
 
           <!-- Section 3: Ground PTZ Slew & Gimbal Override -->
           <div>
-            <div class="text-[11px] font-bold text-emerald-400 uppercase mb-1.5">Gimbal PTZ Slew Control (Node C)</div>
+            <div class="text-[11px] font-bold text-emerald-400 uppercase mb-1.5 flex items-center justify-between">
+              <span>Gimbal PTZ Slew Control (Node C / Ground Tracker)</span>
+              <span class="text-[9px] text-gray-400 font-mono">WASD / Arrow Keys</span>
+            </div>
             <div class="flex flex-wrap items-center justify-between gap-2 p-2 bg-gray-950/70 rounded-lg border border-gray-800">
               <div class="flex items-center gap-1">
-                <button onclick="sendPTZ('pan_left')" class="px-2.5 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition">&larr; Left</button>
+                <button id="btn-ptz-left" onclick="sendPTZ('pan_left')" class="px-2.5 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition flex items-center gap-1" title="Hotkey: A or Left Arrow">
+                  <span>&larr;</span> <span>[A]</span> Left
+                </button>
                 <div class="flex flex-col gap-1">
-                  <button onclick="sendPTZ('tilt_up')" class="px-2.5 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition">&uarr; Up</button>
-                  <button onclick="sendPTZ('tilt_down')" class="px-2.5 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition">&darr; Down</button>
+                  <button id="btn-ptz-up" onclick="sendPTZ('tilt_up')" class="px-2.5 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition flex items-center justify-center gap-1" title="Hotkey: W or Up Arrow">
+                    <span>&uarr;</span> <span>[W]</span> Up
+                  </button>
+                  <button id="btn-ptz-down" onclick="sendPTZ('tilt_down')" class="px-2.5 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition flex items-center justify-center gap-1" title="Hotkey: S or Down Arrow">
+                    <span>&darr;</span> <span>[S]</span> Down
+                  </button>
                 </div>
-                <button onclick="sendPTZ('pan_right')" class="px-2.5 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition">Right &rarr;</button>
+                <button id="btn-ptz-right" onclick="sendPTZ('pan_right')" class="px-2.5 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition flex items-center gap-1" title="Hotkey: D or Right Arrow">
+                  Right <span>[D]</span> <span>&rarr;</span>
+                </button>
               </div>
 
               <div class="flex items-center gap-1.5">
-                <button onclick="sendPTZ('toggle_auto')" class="px-2.5 py-1.5 text-xs font-bold rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 active:scale-95 transition">
-                  Auto / Manual
+                <button id="btn-ptz-auto" onclick="sendPTZ('toggle_auto')" class="px-2.5 py-1.5 text-xs font-bold rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 active:scale-95 transition" title="Hotkey: M (Toggle Auto-Track / Manual)">
+                  Auto / Manual <span class="text-sky-400 font-mono text-[10px] ml-0.5 font-bold">[M]</span>
                 </button>
-                <button onclick="sendPTZ('recenter')" class="px-2.5 py-1.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 active:scale-95 transition">
-                  Re-Center
+                <button id="btn-ptz-recenter" onclick="sendPTZ('recenter')" class="px-2.5 py-1.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 active:scale-95 transition" title="Hotkey: R (Re-Center to 1000, 1000)">
+                  Re-Center <span class="text-gray-400 font-mono text-[10px] ml-0.5 font-bold">[R]</span>
                 </button>
               </div>
             </div>
@@ -349,6 +455,78 @@
   </div>
 
   <!-- ===================================================================== -->
+  <!-- Hotkeys Reference Cheat Sheet Modal                                    -->
+  <!-- ===================================================================== -->
+  <div id="hotkeys-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex flex-col items-center justify-center p-4" onclick="toggleHotkeyModal()">
+    <div class="glass-card max-w-lg w-full p-4 flex flex-col gap-3 relative shadow-2xl border-sky-800" onclick="event.stopPropagation()">
+      <div class="flex justify-between items-center pb-2 border-b border-gray-800">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+          <span class="text-sm font-bold text-sky-400 font-mono tracking-wide uppercase">Mission Control Keyboard Shortcuts</span>
+        </div>
+        <button onclick="toggleHotkeyModal()" class="text-xs px-2.5 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold">&times; Close</button>
+      </div>
+      
+      <div class="space-y-3 text-xs">
+        <div class="p-2 rounded bg-gray-950/80 border border-gray-800/80">
+          <h4 class="font-bold text-emerald-400 uppercase text-[11px] mb-1.5 flex items-center justify-between">
+            <span>Terminal 3: Ground Tracker Gimbal PTZ</span>
+            <span class="text-[9px] text-gray-500 font-mono">NODE C</span>
+          </h4>
+          <div class="grid grid-cols-2 gap-1.5 text-[11px] font-mono text-gray-300">
+            <div><span class="text-emerald-400 font-bold">[W] / [&uarr;]</span> Tilt Gimbal Up</div>
+            <div><span class="text-emerald-400 font-bold">[S] / [&darr;]</span> Tilt Gimbal Down</div>
+            <div><span class="text-emerald-400 font-bold">[A] / [&larr;]</span> Pan Gimbal Left</div>
+            <div><span class="text-emerald-400 font-bold">[D] / [&rarr;]</span> Pan Gimbal Right</div>
+            <div><span class="text-emerald-400 font-bold">[M]</span> Auto-Track / Manual</div>
+            <div><span class="text-emerald-400 font-bold">[R]</span> Re-Center (1000, 1000)</div>
+          </div>
+        </div>
+
+        <div class="p-2 rounded bg-gray-950/80 border border-gray-800/80">
+          <h4 class="font-bold text-amber-400 uppercase text-[11px] mb-1.5 flex items-center justify-between">
+            <span>Terminal 2: Atmospheric Channel Disturbances</span>
+            <span class="text-[9px] text-gray-500 font-mono">NODE B</span>
+          </h4>
+          <div class="grid grid-cols-2 gap-1.5 text-[11px] font-mono text-gray-300">
+            <div><span class="text-amber-400 font-bold">[1]</span> Step Noise (10% &rarr; 25% &rarr; 0%)</div>
+            <div><span class="text-amber-400 font-bold">[2]</span> Kolmogorov Turbulence</div>
+            <div><span class="text-amber-400 font-bold">[3]</span> Beer-Lambert Cloud Fog</div>
+            <div><span class="text-amber-400 font-bold">[4]</span> Trigger Solar Flare Flash</div>
+            <div class="col-span-2"><span class="text-red-400 font-bold">[5]</span> Optical Blackout (1-Sec Scintillation Burst)</div>
+          </div>
+        </div>
+
+        <div class="p-2 rounded bg-gray-950/80 border border-gray-800/80">
+          <h4 class="font-bold text-sky-400 uppercase text-[11px] mb-1.5 flex items-center justify-between">
+            <span>Terminal 1: Satellite Kinematics & Radar Map</span>
+            <span class="text-[9px] text-gray-500 font-mono">NODE A</span>
+          </h4>
+          <div class="grid grid-cols-2 gap-1.5 text-[11px] font-mono text-gray-300">
+            <div class="col-span-2 text-amber-300 font-bold"><span class="text-sky-400">[Click Radar Map]</span> Instant Universe GOTO (X, Y)</div>
+            <div><span class="text-sky-400 font-bold">[I]</span> Steer North (+Vy)</div>
+            <div><span class="text-sky-400 font-bold">[K]</span> Steer South (-Vy)</div>
+            <div><span class="text-sky-400 font-bold">[J]</span> Steer West (-Vx)</div>
+            <div><span class="text-sky-400 font-bold">[L]</span> Steer East (+Vx)</div>
+            <div class="col-span-2"><span class="text-sky-400 font-bold">[Space]</span> High-G Evasive Maneuver Jump</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="pt-2 border-t border-gray-800 text-[10px] text-gray-400 font-mono text-center flex justify-between">
+        <span>Press ESC to dismiss</span>
+        <span>Phoenix-X Unified Flight Control System</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tactical HUD Keypress Feedback Indicator -->
+  <div id="hud-keypress" class="fixed bottom-4 right-4 z-40 pointer-events-none transition-all duration-200 opacity-0 translate-y-2 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-sky-950/95 border border-sky-500/70 backdrop-blur-md shadow-2xl shadow-black/80">
+    <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
+    <span id="hud-keypress-text" class="text-xs font-mono font-bold text-sky-200"></span>
+  </div>
+
+  <!-- ===================================================================== -->
   <!-- Client JavaScript Logic & Sparkline Renderer                          -->
   <!-- ===================================================================== -->
   <script>
@@ -379,9 +557,14 @@
       }
     }
 
-    async function sendControl(target, action) {
+    // Unified Control Dispatcher (Supports coordinates for goto commands)
+    async function sendControl(target, action, x, y) {
       try {
-        await fetch(`/control?target=${target}&action=${action}`);
+        let url = `/control?target=${target}&action=${action}`;
+        if (x !== undefined && y !== undefined) {
+          url += `&x=${x}&y=${y}`;
+        }
+        await fetch(url);
       } catch (e) {
         console.error("Control dispatch failed", e);
       }
@@ -414,8 +597,225 @@
       document.getElementById('lightbox-modal').classList.add('hidden');
     }
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeLightbox();
+    function toggleHotkeyModal() {
+      const modal = document.getElementById('hotkeys-modal');
+      if (modal) modal.classList.toggle('hidden');
+    }
+
+    // Button visual feedback pulse
+    function triggerButton(btnId) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      btn.classList.add('ring-2', 'ring-sky-400', 'scale-95');
+      setTimeout(() => {
+        btn.classList.remove('ring-2', 'ring-sky-400', 'scale-95');
+      }, 160);
+    }
+
+    // Tactical HUD keypress feedback notification
+    let hudTimer = null;
+    function flashHUD(message, styleClass = 'text-sky-200') {
+      const el = document.getElementById('hud-keypress');
+      const txt = document.getElementById('hud-keypress-text');
+      if (!el || !txt) return;
+
+      txt.className = `text-xs font-mono font-bold ${styleClass}`;
+      txt.textContent = message;
+
+      el.classList.remove('opacity-0', 'translate-y-2');
+      el.classList.add('opacity-100', 'translate-y-0');
+
+      if (hudTimer) clearTimeout(hudTimer);
+      hudTimer = setTimeout(() => {
+        el.classList.remove('opacity-100', 'translate-y-0');
+        el.classList.add('opacity-0', 'translate-y-2');
+      }, 1400);
+    }
+
+    // Tactical Radar Map Interaction (Terminal 1)
+    function handleRadarClick(e) {
+      const container = document.getElementById('radar-container');
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      // Radar canvas is the left 600px of 880x600 display (600 / 880 = 0.681818)
+      const radarFractionX = 600.0 / 880.0;
+      const radarWidth = rect.width * radarFractionX;
+
+      if (clickX <= radarWidth) {
+        const normX = Math.max(0.0, Math.min(1.0, clickX / radarWidth));
+        const normY = Math.max(0.0, Math.min(1.0, clickY / rect.height));
+
+        const univX = Math.round(normX * 2000.0);
+        const univY = Math.round(normY * 2000.0);
+
+        // Clamp to safe boundaries [150, 1850]
+        const safeX = Math.max(150, Math.min(1850, univX));
+        const safeY = Math.max(150, Math.min(1850, univY));
+
+        sendControl('satellite', 'goto', safeX, safeY);
+        showRadarPing(clickX, clickY);
+        flashHUD(`MAP DISPATCH: SATELLITE GOTO (${safeX}, ${safeY})`, 'text-sky-300 font-mono');
+      } else {
+        flashHUD('CLICK ON RADAR GRID (LEFT) TO DISPATCH SATELLITE', 'text-amber-400');
+      }
+    }
+
+    function showRadarPing(x, y) {
+      const ping = document.getElementById('radar-ping');
+      const marker = document.getElementById('radar-target-marker');
+      if (!ping || !marker) return;
+
+      ping.style.left = `${x}px`;
+      ping.style.top = `${y}px`;
+      ping.classList.remove('hidden');
+
+      marker.style.left = `${x}px`;
+      marker.style.top = `${y}px`;
+      marker.classList.remove('hidden');
+
+      setTimeout(() => {
+        ping.classList.add('hidden');
+      }, 700);
+    }
+
+    function handleRadarMouseMove(e) {
+      const container = document.getElementById('radar-container');
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const radarWidth = rect.width * (600.0 / 880.0);
+      const tag = document.getElementById('radar-cursor-tag');
+      if (!tag) return;
+
+      if (mouseX <= radarWidth) {
+        const normX = mouseX / radarWidth;
+        const normY = mouseY / rect.height;
+        const ux = Math.round(normX * 2000.0);
+        const uy = Math.round(normY * 2000.0);
+        tag.textContent = `UNIV: (${ux}, ${uy})`;
+        tag.style.left = `${mouseX}px`;
+        tag.style.top = `${mouseY}px`;
+        tag.classList.remove('hidden');
+      } else {
+        tag.classList.add('hidden');
+      }
+    }
+
+    function handleRadarMouseLeave() {
+      const tag = document.getElementById('radar-cursor-tag');
+      if (tag) tag.classList.add('hidden');
+    }
+
+    // Global Keyboard Event Listener
+    window.addEventListener('keydown', (e) => {
+      // Ignore keystrokes if focused inside an input/textarea
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      const key = e.key.toLowerCase();
+
+      // Escape key closes modals / lightbox
+      if (e.key === 'Escape') {
+        closeLightbox();
+        const hotkeyModal = document.getElementById('hotkeys-modal');
+        if (hotkeyModal && !hotkeyModal.classList.contains('hidden')) {
+          hotkeyModal.classList.add('hidden');
+        }
+        return;
+      }
+
+      // 1. PTZ Gimbal Controls (WASD & Arrow Keys)
+      if (key === 'w' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        triggerButton('btn-ptz-up');
+        sendPTZ('tilt_up');
+        flashHUD('KEY [W / ↑]: GIMBAL TILT UP', 'text-sky-400');
+      } else if (key === 's' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        triggerButton('btn-ptz-down');
+        sendPTZ('tilt_down');
+        flashHUD('KEY [S / ↓]: GIMBAL TILT DOWN', 'text-sky-400');
+      } else if (key === 'a' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        triggerButton('btn-ptz-left');
+        sendPTZ('pan_left');
+        flashHUD('KEY [A / ←]: GIMBAL PAN LEFT', 'text-sky-400');
+      } else if (key === 'd' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        triggerButton('btn-ptz-right');
+        sendPTZ('pan_right');
+        flashHUD('KEY [D / →]: GIMBAL PAN RIGHT', 'text-sky-400');
+      } else if (key === 'm') {
+        e.preventDefault();
+        triggerButton('btn-ptz-auto');
+        sendPTZ('toggle_auto');
+        flashHUD('KEY [M]: TOGGLE AUTO-TRACK / MANUAL', 'text-emerald-400');
+      } else if (key === 'r') {
+        e.preventDefault();
+        triggerButton('btn-ptz-recenter');
+        sendPTZ('recenter');
+        flashHUD('KEY [R]: GIMBAL RE-CENTER ORIGIN (1000, 1000)', 'text-indigo-400');
+      }
+
+      // 2. Atmospheric Channel Disturbances (1, 2, 3, 4, 5)
+      else if (key === '1') {
+        e.preventDefault();
+        triggerButton('btn-ctrl-noise');
+        sendControl('channel', 'step_noise');
+        flashHUD('KEY [1]: STEP IMPULSIVE S&P NOISE', 'text-amber-400');
+      } else if (key === '2') {
+        e.preventDefault();
+        triggerButton('btn-ctrl-turb');
+        sendControl('channel', 'toggle_turbulence');
+        flashHUD('KEY [2]: TOGGLE KOLMOGOROV TURBULENCE', 'text-amber-400');
+      } else if (key === '3') {
+        e.preventDefault();
+        triggerButton('btn-ctrl-fog');
+        sendControl('channel', 'toggle_fog');
+        flashHUD('KEY [3]: TOGGLE BEER-LAMBERT FOG', 'text-amber-400');
+      } else if (key === '4') {
+        e.preventDefault();
+        triggerButton('btn-ctrl-glare');
+        sendControl('channel', 'glare');
+        flashHUD('KEY [4]: TRIGGER SOLAR GLARE FLARE', 'text-amber-400');
+      } else if (key === '5') {
+        e.preventDefault();
+        triggerButton('btn-ctrl-blackout');
+        sendControl('channel', 'blackout');
+        flashHUD('KEY [5]: INJECT 1-SEC SCINTILLATION BLACKOUT', 'text-red-400 font-bold');
+      }
+
+      // 3. Satellite Kinematics (I, K, J, L & Space)
+      else if (key === 'i') {
+        e.preventDefault();
+        triggerButton('btn-sat-n');
+        sendControl('satellite', 'steer_up');
+        flashHUD('KEY [I]: SATELLITE STEER NORTH (+Vy)', 'text-sky-300');
+      } else if (key === 'k') {
+        e.preventDefault();
+        triggerButton('btn-sat-s');
+        sendControl('satellite', 'steer_down');
+        flashHUD('KEY [K]: SATELLITE STEER SOUTH (-Vy)', 'text-sky-300');
+      } else if (key === 'j') {
+        e.preventDefault();
+        triggerButton('btn-sat-w');
+        sendControl('satellite', 'steer_left');
+        flashHUD('KEY [J]: SATELLITE STEER WEST (-Vx)', 'text-sky-300');
+      } else if (key === 'l') {
+        e.preventDefault();
+        triggerButton('btn-sat-e');
+        sendControl('satellite', 'steer_right');
+        flashHUD('KEY [L]: SATELLITE STEER EAST (+Vx)', 'text-sky-300');
+      } else if (key === ' ') {
+        e.preventDefault();
+        triggerButton('btn-sat-jump');
+        triggerButton('btn-sat-evasive-master');
+        sendControl('satellite', 'evasive');
+        flashHUD('KEY [SPACE]: HIGH-G EVASIVE MANEUVER JUMP', 'text-amber-300 font-bold');
+      }
     });
 
     // Draw Real-Time Error Sparkline
