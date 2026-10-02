@@ -147,7 +147,7 @@ def main():
         sock_cmd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock_cmd.bind(("127.0.0.1", args.cmd_port))
         sock_cmd.settimeout(1.0)
-        step_px = 35.0
+        step_px = 65.0
         while True:
             try:
                 data, _ = sock_cmd.recvfrom(1024)
@@ -158,21 +158,28 @@ def main():
                 if cmd == "pan_left":
                     GIMBAL_STATE["auto_track"] = False
                     GIMBAL_STATE["cam_x"] -= step_px
+                    print(f"[*] Node C Ground Tracker: PTZ PAN LEFT -> Cam: ({GIMBAL_STATE['cam_x']:.1f}, {GIMBAL_STATE['cam_y']:.1f})")
                 elif cmd == "pan_right":
                     GIMBAL_STATE["auto_track"] = False
                     GIMBAL_STATE["cam_x"] += step_px
+                    print(f"[*] Node C Ground Tracker: PTZ PAN RIGHT -> Cam: ({GIMBAL_STATE['cam_x']:.1f}, {GIMBAL_STATE['cam_y']:.1f})")
                 elif cmd == "tilt_up":
                     GIMBAL_STATE["auto_track"] = False
                     GIMBAL_STATE["cam_y"] -= step_px
+                    print(f"[*] Node C Ground Tracker: PTZ TILT UP -> Cam: ({GIMBAL_STATE['cam_x']:.1f}, {GIMBAL_STATE['cam_y']:.1f})")
                 elif cmd == "tilt_down":
                     GIMBAL_STATE["auto_track"] = False
                     GIMBAL_STATE["cam_y"] += step_px
+                    print(f"[*] Node C Ground Tracker: PTZ TILT DOWN -> Cam: ({GIMBAL_STATE['cam_x']:.1f}, {GIMBAL_STATE['cam_y']:.1f})")
                 elif cmd in ("toggle_auto", "toggle_track"):
                     GIMBAL_STATE["auto_track"] = not GIMBAL_STATE["auto_track"]
+                    print(f"[*] Node C Ground Tracker: PTZ Mode Toggled -> {'AUTO-TRACK' if GIMBAL_STATE['auto_track'] else 'MANUAL OVERRIDE'}")
                 elif cmd == "recenter":
                     GIMBAL_STATE["cam_x"] = UNIVERSE_WIDTH_PX / 2.0
                     GIMBAL_STATE["cam_y"] = UNIVERSE_HEIGHT_PX / 2.0
                     GIMBAL_STATE["auto_track"] = True
+                    tracker.loss_frames = 0
+                    print("[*] Node C Ground Tracker: PTZ Re-Centered to (1000.0, 1000.0) [AUTO-TRACK]")
             except Exception:
                 continue
         sock_cmd.close()
@@ -324,6 +331,10 @@ def main():
         LATEST_TELEMETRY["auto_track"] = GIMBAL_STATE["auto_track"]
         LATEST_TELEMETRY["true_x"] = float(meta_json["apparent_local_x"])
         LATEST_TELEMETRY["true_y"] = float(meta_json["apparent_local_y"])
+        # Forward physical channel states from upstream meta_json
+        LATEST_TELEMETRY["turbulence_active"] = meta_json.get("turbulence_active", True)
+        LATEST_TELEMETRY["fog_active"] = meta_json.get("fog_active", False)
+        LATEST_TELEMETRY["noise_ratio"] = meta_json.get("sp_noise_ratio", 0.10)
 
         # -----------------------------------------------------------------
         # Terminal 2 Visual Cockpit Window

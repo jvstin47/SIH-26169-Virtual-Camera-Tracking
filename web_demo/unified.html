@@ -162,9 +162,23 @@
             </button>
           </div>
         </div>
-        <div class="mt-2 pt-2 border-t border-gray-800/80 flex items-center justify-between text-[10px] font-mono text-gray-400">
-          <span>HOTKEYS: [1] NOISE &bull; [2] TURB &bull; [3] FOG</span>
-          <span class="text-amber-400 font-bold">[4/5] FLASH/BURST</span>
+        <!-- Channel Disturbance Buttons Directly on Card 2 -->
+        <div class="mt-2 pt-2 border-t border-gray-800/80 flex flex-wrap items-center justify-between gap-1 text-[10px] font-mono">
+          <button id="btn-card2-noise" onclick="sendControl('channel', 'step_noise')" class="px-1.5 py-1 rounded bg-gray-900 hover:bg-amber-950 border border-gray-800 hover:border-amber-700 text-amber-300 transition active:scale-95 flex items-center gap-1" title="Hotkey: 1 (Step S&P Noise 10% -> 25% -> 0%)">
+            <span class="text-gray-500 font-bold">[1]</span> Noise: <span id="badge-card2-noise" class="font-bold text-amber-400">10%</span>
+          </button>
+          <button id="btn-card2-turb" onclick="sendControl('channel', 'toggle_turbulence')" class="px-1.5 py-1 rounded bg-gray-900 hover:bg-amber-950 border border-gray-800 hover:border-amber-700 text-amber-300 transition active:scale-95 flex items-center gap-1" title="Hotkey: 2 (Kolmogorov Wavefront Shimmer)">
+            <span class="text-gray-500 font-bold">[2]</span> Turb: <span id="badge-card2-turb" class="font-bold text-amber-400">ON</span>
+          </button>
+          <button id="btn-card2-fog" onclick="sendControl('channel', 'toggle_fog')" class="px-1.5 py-1 rounded bg-gray-900 hover:bg-indigo-950 border border-gray-800 hover:border-indigo-700 text-indigo-300 transition active:scale-95 flex items-center gap-1" title="Hotkey: 3 (Beer-Lambert Fog)">
+            <span class="text-gray-500 font-bold">[3]</span> Fog: <span id="badge-card2-fog" class="font-bold text-gray-400">OFF</span>
+          </button>
+          <button id="btn-card2-glare" onclick="sendControl('channel', 'glare')" class="px-1.5 py-1 rounded bg-gray-900 hover:bg-amber-950 border border-gray-800 hover:border-amber-700 text-amber-400 transition active:scale-95 font-bold" title="Hotkey: 4 (Solar Glare Flare)">
+            <span>[4]</span> Flare
+          </button>
+          <button id="btn-card2-blackout" onclick="sendControl('channel', 'blackout')" class="px-2 py-1 rounded bg-red-950/80 hover:bg-red-900 border border-red-800 text-red-300 transition active:scale-95 font-bold flex items-center gap-0.5" title="Hotkey: 5 (1s Scintillation Blackout)">
+            <span>[5]</span> Blackout
+          </button>
         </div>
       </div>
 
@@ -176,7 +190,11 @@
               <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
               <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Terminal 3: Ground Tracker</span>
             </div>
-            <span id="badge-mode" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300">AUTO-TRACK</span>
+            <!-- Clickable Mode Toggle Button in Card 3 Header -->
+            <button id="btn-card3-header-mode" onclick="sendPTZ('toggle_auto')" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950 hover:bg-emerald-900 border border-emerald-700 text-emerald-300 transition cursor-pointer flex items-center gap-1 shadow-sm active:scale-95" title="Click to toggle Auto-Track vs Manual Override (Hotkey: M)">
+              <span id="dot-card3-mode" class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="badge-mode">AUTO-TRACK</span>
+            </button>
           </div>
           <div class="feed-container aspect-[4/3] flex items-center justify-center relative">
             <img id="feed-c" src="/stream/node_c" alt="Node C Feed" class="feed-img" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%2334d399\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Tracker (UDP 9998)...</text></svg>'">
@@ -188,9 +206,37 @@
             </button>
           </div>
         </div>
-        <div class="mt-2 pt-2 border-t border-gray-800/80 flex items-center justify-between text-[10px] font-mono text-gray-400">
-          <span>SLEW: [W/A/S/D] OR ARROW KEYS</span>
-          <span class="text-emerald-400 font-bold">[M] AUTO &bull; [R] RESET</span>
+
+        <!-- Ground Tracker PTZ Slew & Mode Controls Directly on Card 3 -->
+        <div class="mt-2 pt-2 border-t border-gray-800/80 flex flex-wrap items-center justify-between gap-1 text-[11px]">
+          <!-- PTZ Slew D-Pad -->
+          <div class="flex items-center gap-1">
+            <span class="text-gray-400 font-semibold uppercase text-[10px] mr-0.5">PTZ Slew:</span>
+            <button id="btn-ptz-left-card" onclick="sendPTZ('pan_left')" class="px-2 py-0.5 rounded bg-gray-900 hover:bg-emerald-950 border border-gray-800 hover:border-emerald-700 text-emerald-400 font-mono text-[10px] transition active:scale-95" title="Hotkey: A (Pan Left)">
+              <span class="text-gray-500 font-bold">[A]</span> &larr;
+            </button>
+            <div class="flex flex-col gap-0.5">
+              <button id="btn-ptz-up-card" onclick="sendPTZ('tilt_up')" class="px-2 py-0.5 rounded bg-gray-900 hover:bg-emerald-950 border border-gray-800 hover:border-emerald-700 text-emerald-400 font-mono text-[10px] transition active:scale-95" title="Hotkey: W (Tilt Up)">
+                <span class="text-gray-500 font-bold">[W]</span> &uarr;
+              </button>
+              <button id="btn-ptz-down-card" onclick="sendPTZ('tilt_down')" class="px-2 py-0.5 rounded bg-gray-900 hover:bg-emerald-950 border border-gray-800 hover:border-emerald-700 text-emerald-400 font-mono text-[10px] transition active:scale-95" title="Hotkey: S (Tilt Down)">
+                <span class="text-gray-500 font-bold">[S]</span> &darr;
+              </button>
+            </div>
+            <button id="btn-ptz-right-card" onclick="sendPTZ('pan_right')" class="px-2 py-0.5 rounded bg-gray-900 hover:bg-emerald-950 border border-gray-800 hover:border-emerald-700 text-emerald-400 font-mono text-[10px] transition active:scale-95" title="Hotkey: D (Pan Right)">
+              &rarr; <span class="text-gray-500 font-bold">[D]</span>
+            </button>
+          </div>
+
+          <!-- Auto / Manual Mode Toggle & Recenter Buttons -->
+          <div class="flex items-center gap-1.5">
+            <button id="btn-card3-auto-btn" onclick="sendPTZ('toggle_auto')" class="px-2.5 py-1 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 font-mono text-[10px] transition font-bold flex items-center gap-1 active:scale-95 shadow-sm" title="Hotkey: M (Toggle Auto-Track / Manual)">
+              <span id="btn-card3-auto-txt">⚡ [M] AUTO</span>
+            </button>
+            <button id="btn-card3-recenter-btn" onclick="sendPTZ('recenter')" class="px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700 font-mono text-[10px] transition font-semibold active:scale-95" title="Hotkey: R (Re-Center to 1000, 1000)">
+              [R] Recenter
+            </button>
+          </div>
         </div>
       </div>
 
@@ -266,120 +312,133 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1">
       
       <!-- Interactive Controls Pad (5 cols) -->
-      <div class="lg:col-span-5 glass-card p-3 flex flex-col justify-between gap-3">
+      <div class="lg:col-span-5 glass-card p-3 flex flex-col justify-between gap-2">
         <div>
           <div class="flex justify-between items-center mb-2 pb-1.5 border-b border-gray-800">
             <span class="text-xs font-bold text-gray-300 uppercase tracking-wide">Master Remote Control Station</span>
             <span class="text-[10px] text-sky-400 font-mono">CLOSED-LOOP HIL</span>
           </div>
 
-          <!-- Section 1: Atmospheric Disturbances (Channel) -->
-          <div class="mb-3">
-            <div class="text-[11px] font-bold text-amber-400 uppercase mb-1.5 flex items-center justify-between">
-              <span>Atmospheric Optical Disturbances (Node B)</span>
-              <span class="text-[9px] text-gray-400 font-mono">Hotkeys: 1 - 5</span>
-            </div>
-            <div class="grid grid-cols-2 gap-1.5 text-xs">
-              <button id="btn-ctrl-noise" onclick="sendControl('channel', 'step_noise')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition active:scale-95" title="Hotkey: 1 (Step Impulsive Noise)">
-                <div class="flex items-center gap-1.5">
-                  <span class="px-1.5 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-amber-400 font-bold border border-gray-700">[1]</span>
-                  <span>Impulsive S&amp;P Noise</span>
-                </div>
-                <span id="badge-ctrl-noise" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono font-bold">10% SLA</span>
-              </button>
-              <button id="btn-ctrl-turb" onclick="sendControl('channel', 'toggle_turbulence')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition active:scale-95" title="Hotkey: 2 (Kolmogorov Wavefront Shimmer)">
-                <div class="flex items-center gap-1.5">
-                  <span class="px-1.5 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-amber-400 font-bold border border-gray-700">[2]</span>
-                  <span>Turbulence (Kolmogorov)</span>
-                </div>
-                <span id="badge-ctrl-turb" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono font-bold">ON</span>
-              </button>
-              <button id="btn-ctrl-fog" onclick="sendControl('channel', 'toggle_fog')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition active:scale-95" title="Hotkey: 3 (Beer-Lambert Cloud Fog)">
-                <div class="flex items-center gap-1.5">
-                  <span class="px-1.5 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-amber-400 font-bold border border-gray-700">[3]</span>
-                  <span>Fog (Beer-Lambert)</span>
-                </div>
-                <span id="badge-ctrl-fog" class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700 font-mono">OFF</span>
-              </button>
-              <button id="btn-ctrl-glare" onclick="sendControl('channel', 'glare')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition active:scale-95" title="Hotkey: 4 (Solar Glare Flare)">
-                <div class="flex items-center gap-1.5">
-                  <span class="px-1.5 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-amber-400 font-bold border border-gray-700">[4]</span>
-                  <span>Solar Glare Flash</span>
-                </div>
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono font-bold">TRIGGER</span>
-              </button>
-              <button id="btn-ctrl-blackout" onclick="sendControl('channel', 'blackout')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-red-700/60 font-medium text-left col-span-2 flex items-center justify-between transition active:scale-95" title="Hotkey: 5 (Scintillation Dropout 1s Burst)">
-                <div class="flex items-center gap-1.5">
-                  <span class="px-1.5 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-red-400 font-bold border border-gray-700">[5]</span>
-                  <span>Scintillation Fading Dropout (Optical Blackout)</span>
-                </div>
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-950 text-red-400 border border-red-800 font-mono font-bold">1s BURST</span>
-              </button>
-            </div>
+          <!-- Section Switcher Tabs -->
+          <div class="flex items-center gap-1 mb-2 bg-gray-950 p-1 rounded-lg border border-gray-800 text-[11px] font-mono">
+            <button id="tab-ctrl-ptz" onclick="switchControlTab('ptz')" class="flex-1 py-1 rounded font-bold bg-emerald-700 text-white transition text-center shadow-sm">
+              [C] PTZ Tracker
+            </button>
+            <button id="tab-ctrl-chan" onclick="switchControlTab('chan')" class="flex-1 py-1 rounded font-bold text-gray-400 hover:text-amber-300 transition text-center">
+              [B] Disturbance
+            </button>
+            <button id="tab-ctrl-sat" onclick="switchControlTab('sat')" class="flex-1 py-1 rounded font-bold text-gray-400 hover:text-sky-300 transition text-center">
+              [A] Satellite
+            </button>
           </div>
 
-          <!-- Section 2: Satellite Dynamics -->
-          <div class="mb-3">
-            <div class="text-[11px] font-bold text-sky-400 uppercase mb-1.5 flex items-center justify-between">
-              <span>Satellite Kinematics (Node A)</span>
-              <span class="text-[9px] text-gray-400 font-mono">Map Click &bull; I, J, K, L &bull; Space</span>
-            </div>
-            <div class="grid grid-cols-2 gap-1.5 text-xs">
-              <button id="btn-sat-evasive-master" onclick="sendControl('satellite', 'evasive')" class="col-span-2 p-2 rounded bg-sky-950/60 hover:bg-sky-900/60 border border-sky-800 font-bold text-sky-300 transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95" title="Hotkey: Space">
-                <span>⚡</span> Trigger High-G Evasive Maneuver Jump <span class="text-sky-400 font-mono text-[10px] ml-1 font-bold">[Space]</span>
-              </button>
-              <button onclick="sendControl('satellite', 'steer_up')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sky-400 font-mono text-[11px] text-center transition active:scale-95" title="Hotkey: I">
-                <span class="font-bold">[I]</span> &uarr; North (+Vy)
-              </button>
-              <button onclick="sendControl('satellite', 'steer_down')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sky-400 font-mono text-[11px] text-center transition active:scale-95" title="Hotkey: K">
-                <span class="font-bold">[K]</span> &darr; South (-Vy)
-              </button>
-              <button onclick="sendControl('satellite', 'steer_left')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sky-400 font-mono text-[11px] text-center transition active:scale-95" title="Hotkey: J">
-                <span class="font-bold">[J]</span> &larr; West (-Vx)
-              </button>
-              <button onclick="sendControl('satellite', 'steer_right')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sky-400 font-mono text-[11px] text-center transition active:scale-95" title="Hotkey: L">
-                East &rarr; <span class="font-bold">[L]</span> (+Vx)
-              </button>
-            </div>
-          </div>
-
-          <!-- Section 3: Ground PTZ Slew & Gimbal Override -->
-          <div>
-            <div class="text-[11px] font-bold text-emerald-400 uppercase mb-1.5 flex items-center justify-between">
-              <span>Gimbal PTZ Slew Control (Node C / Ground Tracker)</span>
+          <!-- Tab Pane 1: Ground Tracker PTZ Slew & Mode Controls (Default) -->
+          <div id="pane-ctrl-ptz" class="space-y-2">
+            <div class="text-[11px] font-bold text-emerald-400 uppercase flex items-center justify-between">
+              <span>Gimbal PTZ Slew &amp; Mode (Node C)</span>
               <span class="text-[9px] text-gray-400 font-mono">WASD / Arrow Keys</span>
             </div>
-            <div class="flex flex-wrap items-center justify-between gap-2 p-2 bg-gray-950/70 rounded-lg border border-gray-800">
+            <div class="flex flex-wrap items-center justify-between gap-2 p-2 bg-gray-950/80 rounded-lg border border-gray-800">
               <div class="flex items-center gap-1">
-                <button id="btn-ptz-left" onclick="sendPTZ('pan_left')" class="px-2.5 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition flex items-center gap-1" title="Hotkey: A or Left Arrow">
+                <button id="btn-ptz-left" onclick="sendPTZ('pan_left')" class="px-2 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition flex items-center gap-1" title="Hotkey: A or Left Arrow">
                   <span>&larr;</span> <span>[A]</span> Left
                 </button>
-                <div class="flex flex-col gap-1">
-                  <button id="btn-ptz-up" onclick="sendPTZ('tilt_up')" class="px-2.5 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition flex items-center justify-center gap-1" title="Hotkey: W or Up Arrow">
+                <div class="flex flex-col gap-0.5">
+                  <button id="btn-ptz-up" onclick="sendPTZ('tilt_up')" class="px-2 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition flex items-center justify-center gap-1" title="Hotkey: W or Up Arrow">
                     <span>&uarr;</span> <span>[W]</span> Up
                   </button>
-                  <button id="btn-ptz-down" onclick="sendPTZ('tilt_down')" class="px-2.5 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition flex items-center justify-center gap-1" title="Hotkey: S or Down Arrow">
+                  <button id="btn-ptz-down" onclick="sendPTZ('tilt_down')" class="px-2 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition flex items-center justify-center gap-1" title="Hotkey: S or Down Arrow">
                     <span>&darr;</span> <span>[S]</span> Down
                   </button>
                 </div>
-                <button id="btn-ptz-right" onclick="sendPTZ('pan_right')" class="px-2.5 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition flex items-center gap-1" title="Hotkey: D or Right Arrow">
+                <button id="btn-ptz-right" onclick="sendPTZ('pan_right')" class="px-2 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition flex items-center gap-1" title="Hotkey: D or Right Arrow">
                   Right <span>[D]</span> <span>&rarr;</span>
                 </button>
               </div>
 
               <div class="flex items-center gap-1.5">
-                <button id="btn-ptz-auto" onclick="sendPTZ('toggle_auto')" class="px-2.5 py-1.5 text-xs font-bold rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 active:scale-95 transition" title="Hotkey: M (Toggle Auto-Track / Manual)">
-                  Auto / Manual <span class="text-sky-400 font-mono text-[10px] ml-0.5 font-bold">[M]</span>
+                <button id="btn-ptz-auto" onclick="sendPTZ('toggle_auto')" class="px-3 py-1.5 text-xs font-bold rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 active:scale-95 transition shadow-sm flex items-center gap-1" title="Hotkey: M (Toggle Auto-Track / Manual)">
+                  ⚡ Auto / Manual <span class="text-sky-400 font-mono text-[10px] font-bold">[M]</span>
                 </button>
-                <button id="btn-ptz-recenter" onclick="sendPTZ('recenter')" class="px-2.5 py-1.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 active:scale-95 transition" title="Hotkey: R (Re-Center to 1000, 1000)">
-                  Re-Center <span class="text-gray-400 font-mono text-[10px] ml-0.5 font-bold">[R]</span>
+                <button id="btn-ptz-recenter" onclick="sendPTZ('recenter')" class="px-2.5 py-1.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700 active:scale-95 transition" title="Hotkey: R (Re-Center to 1000, 1000)">
+                  Recenter <span class="text-gray-400 font-mono text-[10px]">[R]</span>
                 </button>
               </div>
             </div>
           </div>
+
+          <!-- Tab Pane 2: Atmospheric Disturbances (Channel) -->
+          <div id="pane-ctrl-chan" class="hidden space-y-1.5">
+            <div class="text-[11px] font-bold text-amber-400 uppercase flex items-center justify-between">
+              <span>Atmospheric Disturbances (Node B)</span>
+              <span class="text-[9px] text-gray-400 font-mono">Hotkeys: 1 - 5</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1 text-xs">
+              <button id="btn-ctrl-noise" onclick="sendControl('channel', 'step_noise')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition active:scale-95" title="Hotkey: 1 (Step Impulsive Noise)">
+                <div class="flex items-center gap-1">
+                  <span class="px-1 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-amber-400 font-bold border border-gray-700">[1]</span>
+                  <span>Noise</span>
+                </div>
+                <span id="badge-ctrl-noise" class="text-[10px] px-1 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono font-bold">10% SLA</span>
+              </button>
+              <button id="btn-ctrl-turb" onclick="sendControl('channel', 'toggle_turbulence')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition active:scale-95" title="Hotkey: 2 (Kolmogorov Turbulence)">
+                <div class="flex items-center gap-1">
+                  <span class="px-1 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-amber-400 font-bold border border-gray-700">[2]</span>
+                  <span>Turbulence</span>
+                </div>
+                <span id="badge-ctrl-turb" class="text-[10px] px-1 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono font-bold">ON</span>
+              </button>
+              <button id="btn-ctrl-fog" onclick="sendControl('channel', 'toggle_fog')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-indigo-700/60 font-medium text-left flex items-center justify-between transition active:scale-95" title="Hotkey: 3 (Beer-Lambert Fog)">
+                <div class="flex items-center gap-1">
+                  <span class="px-1 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-indigo-300 font-bold border border-gray-700">[3]</span>
+                  <span>Fog Attenuation</span>
+                </div>
+                <span id="badge-ctrl-fog" class="text-[10px] px-1 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700 font-mono">OFF</span>
+              </button>
+              <button id="btn-ctrl-glare" onclick="sendControl('channel', 'glare')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition active:scale-95" title="Hotkey: 4 (Solar Glare Flare)">
+                <div class="flex items-center gap-1">
+                  <span class="px-1 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-amber-400 font-bold border border-gray-700">[4]</span>
+                  <span>Solar Flare</span>
+                </div>
+                <span class="text-[10px] px-1 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono font-bold">TRIGGER</span>
+              </button>
+              <button id="btn-ctrl-blackout" onclick="sendControl('channel', 'blackout')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-red-700/60 font-medium text-left col-span-2 flex items-center justify-between transition active:scale-95" title="Hotkey: 5 (1s Scintillation Blackout)">
+                <div class="flex items-center gap-1">
+                  <span class="px-1 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-red-400 font-bold border border-gray-700">[5]</span>
+                  <span>Scintillation Dropout (Optical Blackout)</span>
+                </div>
+                <span class="text-[10px] px-1 py-0.5 rounded bg-red-950 text-red-400 border border-red-800 font-mono font-bold">1s BURST</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tab Pane 3: Satellite Dynamics (Node A) -->
+          <div id="pane-ctrl-sat" class="hidden space-y-1.5">
+            <div class="text-[11px] font-bold text-sky-400 uppercase flex items-center justify-between">
+              <span>Satellite Kinematics (Node A)</span>
+              <span class="text-[9px] text-gray-400 font-mono">Map Click &bull; I, J, K, L &bull; Space</span>
+            </div>
+            <div class="grid grid-cols-2 gap-1 text-xs">
+              <button id="btn-sat-evasive-master" onclick="sendControl('satellite', 'evasive')" class="col-span-2 p-1.5 rounded bg-sky-950/70 hover:bg-sky-900 border border-sky-800 font-bold text-sky-300 transition flex items-center justify-center gap-1.5 shadow-sm active:scale-95" title="Hotkey: Space">
+                <span>⚡</span> Trigger High-G Evasive Maneuver Jump <span class="text-sky-400 font-mono text-[10px] ml-1 font-bold">[Space]</span>
+              </button>
+              <button onclick="sendControl('satellite', 'steer_up')" class="p-1 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sky-400 font-mono text-[11px] text-center transition active:scale-95" title="Hotkey: I">
+                <span class="font-bold">[I]</span> &uarr; North (+Vy)
+              </button>
+              <button onclick="sendControl('satellite', 'steer_down')" class="p-1 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sky-400 font-mono text-[11px] text-center transition active:scale-95" title="Hotkey: K">
+                <span class="font-bold">[K]</span> &darr; South (-Vy)
+              </button>
+              <button onclick="sendControl('satellite', 'steer_left')" class="p-1 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sky-400 font-mono text-[11px] text-center transition active:scale-95" title="Hotkey: J">
+                <span class="font-bold">[J]</span> &larr; West (-Vx)
+              </button>
+              <button onclick="sendControl('satellite', 'steer_right')" class="p-1 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 text-sky-400 font-mono text-[11px] text-center transition active:scale-95" title="Hotkey: L">
+                East &rarr; <span class="font-bold">[L]</span> (+Vx)
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div class="text-[10px] text-gray-500 text-center font-mono">
+        <div class="text-[10px] text-gray-500 text-center font-mono pt-1 border-t border-gray-800/80">
           PID GIMBAL CONTROLLER &bull; STRICTLY CLAMPED TO &le; 5.0&deg;/s
         </div>
       </div>
@@ -557,8 +616,72 @@
       }
     }
 
+    function switchControlTab(tabName) {
+      const tabs = ['ptz', 'chan', 'sat'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-ctrl-${t}`);
+        const pane = document.getElementById(`pane-ctrl-${t}`);
+        if (t === tabName) {
+          if (btn) btn.className = "flex-1 py-1 rounded font-bold bg-emerald-700 text-white transition text-center shadow-sm";
+          if (pane) pane.classList.remove('hidden');
+        } else {
+          if (btn) btn.className = "flex-1 py-1 rounded font-bold text-gray-400 hover:text-white transition text-center";
+          if (pane) pane.classList.add('hidden');
+        }
+      });
+    }
+
+    function setUIMode(isAuto) {
+      const badgeMode = document.getElementById('badge-mode');
+      const dotMode = document.getElementById('dot-card3-mode');
+      const headerBtn = document.getElementById('btn-card3-header-mode');
+      const card3Txt = document.getElementById('btn-card3-auto-txt');
+      const card3Btn = document.getElementById('btn-card3-auto-btn');
+      const masterBtn = document.getElementById('btn-ptz-auto');
+
+      if (isAuto) {
+        if (badgeMode) badgeMode.textContent = "AUTO-TRACK";
+        if (dotMode) dotMode.className = "w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse";
+        if (headerBtn) headerBtn.className = "text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950 hover:bg-emerald-900 border border-emerald-700 text-emerald-300 transition cursor-pointer flex items-center gap-1 shadow-sm active:scale-95";
+        if (card3Txt) card3Txt.textContent = "⚡ [M] AUTO";
+        if (card3Btn) card3Btn.className = "px-2.5 py-1 rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 font-mono text-[10px] transition font-bold flex items-center gap-1 active:scale-95 shadow-sm";
+        if (masterBtn) masterBtn.className = "px-3 py-1.5 text-xs font-bold rounded bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 active:scale-95 transition shadow-sm flex items-center gap-1";
+      } else {
+        if (badgeMode) badgeMode.textContent = "MANUAL OVERRIDE";
+        if (dotMode) dotMode.className = "w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping";
+        if (headerBtn) headerBtn.className = "text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-950 hover:bg-amber-900 border border-amber-700 text-amber-300 transition cursor-pointer flex items-center gap-1 shadow-sm active:scale-95";
+        if (card3Txt) card3Txt.textContent = "🕹️ [M] MANUAL";
+        if (card3Btn) card3Btn.className = "px-2.5 py-1 rounded bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-700 font-mono text-[10px] transition font-bold flex items-center gap-1 active:scale-95 shadow-sm";
+        if (masterBtn) masterBtn.className = "px-3 py-1.5 text-xs font-bold rounded bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-700 active:scale-95 transition shadow-sm flex items-center gap-1";
+      }
+    }
+
     // Unified Control Dispatcher (Supports coordinates for goto commands)
     async function sendControl(target, action, x, y) {
+      if (action === 'toggle_turbulence') {
+        const b = document.getElementById('badge-card2-turb');
+        const isCurrentlyOn = b ? b.textContent.includes('ON') : true;
+        flashHUD(`CHANNEL: TURBULENCE ${!isCurrentlyOn ? 'ON' : 'OFF'}`, 'text-amber-400 font-bold');
+        if (b) b.textContent = !isCurrentlyOn ? 'ON' : 'OFF';
+        const b2 = document.getElementById('badge-ctrl-turb');
+        if (b2) b2.textContent = !isCurrentlyOn ? 'ON' : 'OFF';
+      } else if (action === 'toggle_fog') {
+        const b = document.getElementById('badge-card2-fog');
+        const isCurrentlyOn = b ? b.textContent.includes('ON') : false;
+        flashHUD(`CHANNEL: BEER-LAMBERT FOG ${!isCurrentlyOn ? 'ON' : 'OFF'}`, 'text-indigo-300 font-bold');
+        if (b) b.textContent = !isCurrentlyOn ? 'ON' : 'OFF';
+        const b2 = document.getElementById('badge-ctrl-fog');
+        if (b2) b2.textContent = !isCurrentlyOn ? 'ON' : 'OFF';
+      } else if (action === 'step_noise') {
+        flashHUD('CHANNEL: IMPULSIVE NOISE STEPPED', 'text-amber-400 font-bold');
+      } else if (action === 'glare') {
+        flashHUD('CHANNEL: SOLAR FLARE FLASH TRIGGERED', 'text-amber-300 font-bold');
+      } else if (action === 'blackout') {
+        flashHUD('CHANNEL: 1s SCINTILLATION BLACKOUT TRIGGERED', 'text-red-400 font-bold');
+      } else if (action === 'evasive') {
+        flashHUD('SATELLITE: HIGH-G EVASIVE JUMP EXECUTED', 'text-sky-300 font-bold');
+      }
+
       try {
         let url = `/control?target=${target}&action=${action}`;
         if (x !== undefined && y !== undefined) {
@@ -571,6 +694,19 @@
     }
 
     async function sendPTZ(cmd) {
+      if (cmd === 'toggle_auto') {
+        const badgeMode = document.getElementById('badge-mode');
+        const isAuto = badgeMode ? badgeMode.textContent.includes('AUTO') : true;
+        setUIMode(!isAuto);
+        flashHUD(`PTZ: SWITCHED TO ${!isAuto ? 'AUTO-TRACK' : 'MANUAL OVERRIDE'}`, !isAuto ? 'text-emerald-400' : 'text-amber-400 font-bold');
+      } else if (cmd === 'recenter') {
+        setUIMode(true);
+        flashHUD('PTZ: RE-CENTERED TO ORIGIN (1000, 1000)', 'text-indigo-300 font-bold');
+      } else {
+        setUIMode(false); // Slew command switches into manual override
+        flashHUD(`PTZ: SLEW ${cmd.replace('_', ' ').toUpperCase()}`, 'text-emerald-400');
+      }
+
       try {
         await fetch(`/ptz?cmd=${cmd}`);
       } catch (e) {
@@ -731,61 +867,62 @@
       if (key === 'w' || e.key === 'ArrowUp') {
         e.preventDefault();
         triggerButton('btn-ptz-up');
+        triggerButton('btn-ptz-up-card');
         sendPTZ('tilt_up');
-        flashHUD('KEY [W / ↑]: GIMBAL TILT UP', 'text-sky-400');
       } else if (key === 's' || e.key === 'ArrowDown') {
         e.preventDefault();
         triggerButton('btn-ptz-down');
+        triggerButton('btn-ptz-down-card');
         sendPTZ('tilt_down');
-        flashHUD('KEY [S / ↓]: GIMBAL TILT DOWN', 'text-sky-400');
       } else if (key === 'a' || e.key === 'ArrowLeft') {
         e.preventDefault();
         triggerButton('btn-ptz-left');
+        triggerButton('btn-ptz-left-card');
         sendPTZ('pan_left');
-        flashHUD('KEY [A / ←]: GIMBAL PAN LEFT', 'text-sky-400');
       } else if (key === 'd' || e.key === 'ArrowRight') {
         e.preventDefault();
         triggerButton('btn-ptz-right');
+        triggerButton('btn-ptz-right-card');
         sendPTZ('pan_right');
-        flashHUD('KEY [D / →]: GIMBAL PAN RIGHT', 'text-sky-400');
       } else if (key === 'm') {
         e.preventDefault();
         triggerButton('btn-ptz-auto');
+        triggerButton('btn-card3-auto-btn');
+        triggerButton('btn-card3-header-mode');
         sendPTZ('toggle_auto');
-        flashHUD('KEY [M]: TOGGLE AUTO-TRACK / MANUAL', 'text-emerald-400');
       } else if (key === 'r') {
         e.preventDefault();
         triggerButton('btn-ptz-recenter');
+        triggerButton('btn-card3-recenter-btn');
         sendPTZ('recenter');
-        flashHUD('KEY [R]: GIMBAL RE-CENTER ORIGIN (1000, 1000)', 'text-indigo-400');
       }
 
       // 2. Atmospheric Channel Disturbances (1, 2, 3, 4, 5)
       else if (key === '1') {
         e.preventDefault();
         triggerButton('btn-ctrl-noise');
+        triggerButton('btn-card2-noise');
         sendControl('channel', 'step_noise');
-        flashHUD('KEY [1]: STEP IMPULSIVE S&P NOISE', 'text-amber-400');
       } else if (key === '2') {
         e.preventDefault();
         triggerButton('btn-ctrl-turb');
+        triggerButton('btn-card2-turb');
         sendControl('channel', 'toggle_turbulence');
-        flashHUD('KEY [2]: TOGGLE KOLMOGOROV TURBULENCE', 'text-amber-400');
       } else if (key === '3') {
         e.preventDefault();
         triggerButton('btn-ctrl-fog');
+        triggerButton('btn-card2-fog');
         sendControl('channel', 'toggle_fog');
-        flashHUD('KEY [3]: TOGGLE BEER-LAMBERT FOG', 'text-amber-400');
       } else if (key === '4') {
         e.preventDefault();
         triggerButton('btn-ctrl-glare');
+        triggerButton('btn-card2-glare');
         sendControl('channel', 'glare');
-        flashHUD('KEY [4]: TRIGGER SOLAR GLARE FLARE', 'text-amber-400');
       } else if (key === '5') {
         e.preventDefault();
         triggerButton('btn-ctrl-blackout');
+        triggerButton('btn-card2-blackout');
         sendControl('channel', 'blackout');
-        flashHUD('KEY [5]: INJECT 1-SEC SCINTILLATION BLACKOUT', 'text-red-400 font-bold');
       }
 
       // 3. Satellite Kinematics (I, K, J, L & Space)
@@ -910,39 +1047,43 @@
           dotLock.className = "w-2 h-2 rounded-full bg-amber-400 animate-ping";
         }
 
-        // Mode badge
-        const badgeMode = document.getElementById('badge-mode');
-        if (data.auto_track) {
-          badgeMode.textContent = "AUTO-TRACK";
-          badgeMode.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300";
-        } else {
-          badgeMode.textContent = "MANUAL OVERRIDE";
-          badgeMode.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 border border-amber-800 text-amber-300";
+        // Update mode badges and buttons via setUIMode
+        if (data.auto_track !== undefined) {
+          setUIMode(data.auto_track);
         }
 
-        // Dynamic Button Illumination reflecting backend state
+        // Dynamic Button Illumination reflecting backend state (Card 2 and Master station)
         const badgeTurb = document.getElementById('badge-ctrl-turb');
-        if (data.turbulence_active) {
-          badgeTurb.textContent = "ON";
-          badgeTurb.className = "text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-bold";
-        } else {
-          badgeTurb.textContent = "OFF";
-          badgeTurb.className = "text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700";
+        const badgeCard2Turb = document.getElementById('badge-card2-turb');
+        const turbOn = !!data.turbulence_active;
+        if (badgeTurb) {
+          badgeTurb.textContent = turbOn ? "ON" : "OFF";
+          badgeTurb.className = turbOn ? "text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono font-bold" : "text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700 font-mono";
+        }
+        if (badgeCard2Turb) {
+          badgeCard2Turb.textContent = turbOn ? "ON" : "OFF";
+          badgeCard2Turb.className = turbOn ? "font-bold text-amber-400" : "font-bold text-gray-400";
         }
 
         const badgeFog = document.getElementById('badge-ctrl-fog');
-        if (data.fog_active) {
-          badgeFog.textContent = "ON";
-          badgeFog.className = "text-[10px] px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold";
-        } else {
-          badgeFog.textContent = "OFF";
-          badgeFog.className = "text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700";
+        const badgeCard2Fog = document.getElementById('badge-card2-fog');
+        const fogOn = !!data.fog_active;
+        if (badgeFog) {
+          badgeFog.textContent = fogOn ? "ON" : "OFF";
+          badgeFog.className = fogOn ? "text-[10px] px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-mono font-bold" : "text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700 font-mono";
+        }
+        if (badgeCard2Fog) {
+          badgeCard2Fog.textContent = fogOn ? "ON" : "OFF";
+          badgeCard2Fog.className = fogOn ? "font-bold text-indigo-300" : "font-bold text-gray-400";
         }
 
         const badgeNoise = document.getElementById('badge-ctrl-noise');
-        const noisePct = Math.round((data.noise_ratio || 0.10) * 100);
-        badgeNoise.textContent = `${noisePct}% SLA`;
-        document.getElementById('tele-noise-tag').textContent = `${noisePct}% S&P`;
+        const badgeCard2Noise = document.getElementById('badge-card2-noise');
+        const noisePct = Math.round((data.noise_ratio !== undefined ? data.noise_ratio : 0.10) * 100);
+        if (badgeNoise) badgeNoise.textContent = `${noisePct}% SLA`;
+        if (badgeCard2Noise) badgeCard2Noise.textContent = `${noisePct}%`;
+        const teleNoiseTag = document.getElementById('tele-noise-tag');
+        if (teleNoiseTag) teleNoiseTag.textContent = `${noisePct}% S&P`;
 
       } catch (e) {
         // Quiet during poll

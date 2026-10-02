@@ -229,6 +229,7 @@ class MasterUnifiedHandler(http.server.SimpleHTTPRequestHandler):
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.sendto(json.dumps({"cmd": cmd}).encode('utf-8'), ("127.0.0.1", 9995))
             sock.close()
+            append_log("TRACKER", f"PTZ Command Dispatched: {cmd}")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
