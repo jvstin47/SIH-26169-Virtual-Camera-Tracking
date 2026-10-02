@@ -8,7 +8,7 @@ import math
 from dataclasses import dataclass
 from typing import Tuple
 
-# Statutory & Optical Constants from ISRO SAC Problem Statement 26169
+# Optical & Actuation Constants from ISRO SAC Problem Statement 26169
 UNIVERSE_WIDTH_PX = 2000
 UNIVERSE_HEIGHT_PX = 2000
 CAMERA_WIDTH_PX = 640

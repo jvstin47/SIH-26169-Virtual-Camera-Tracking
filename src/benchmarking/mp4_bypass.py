@@ -207,7 +207,7 @@ class VideoBenchmarkRunner:
             writer.writerow(["Lock Retention Rate", f"{lock_rate:.2f}%"])
             if rmse is not None:
                 writer.writerow(["RMSE vs Ground Truth", f"{rmse:.3f} px"])
-                writer.writerow(["ISRO SLA Status", "PASSED (<= 10.0 px)" if rmse <= 10.0 else "REVIEW"])
+                writer.writerow(["PS Requirement Compliance", "COMPLIANT (<= 10.0 px)" if rmse <= 10.0 else "REVIEW"])
             writer.writerow([])
             writer.writerow(["Frame_ID", "Timestamp_s", "Detected_X", "Detected_Y", "Lock_Status", "GT_Error_px"])
             for r in self.frame_records:
@@ -224,6 +224,6 @@ class VideoBenchmarkRunner:
         print(f"[+] Benchmark-2 Evaluation Complete!")
         print(f"    Lock Retention Rate : {lock_rate:.2f}%")
         if rmse is not None:
-            print(f"    RMSE Centroid Error : {rmse:.3f} px (ISRO Mandate: <= 10.0 px)")
+            print(f"    RMSE Centroid Error : {rmse:.3f} px (PS Requirement Target: <= 10.0 px)")
         print(f"    Saved Audit Report  : {csv_path}")
         print("=" * 70 + "\n")

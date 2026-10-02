@@ -209,7 +209,7 @@ class PhoenixXSimulator:
         # Draw central optical crosshairs
         cv2.line(cam_bgr, (cx - 20, cy), (cx + 20, cy), (80, 80, 80), 1)
         cv2.line(cam_bgr, (cx, cy - 20), (cx, cy + 20), (80, 80, 80), 1)
-        cv2.circle(cam_bgr, (cx, cy), 10, (100, 100, 100), 1) # 10 px SLA radius
+        cv2.circle(cam_bgr, (cx, cy), 10, (100, 100, 100), 1) # 10 px PS threshold radius
         
         # Draw detected beacon reticle
         if detected_point:
@@ -308,7 +308,7 @@ class PhoenixXSimulator:
         ty = 445
         cv2.putText(canvas, f"TRAJECTORY : {self.trajectory.mode.upper()}", (30, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 205, 215), 1)
         cv2.putText(canvas, f"CENTROID ERR: {error_px:5.2f} px ({error_arcsec:5.1f}\")", (30, ty + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 255, 255), 1)
-        cv2.putText(canvas, f"ISRO SLA    : <= 10.0 px (PASSED)" if error_px <= 10.0 else "ISRO SLA    : <= 10.0 px (ALIGNING)", (30, ty + 40),
+        cv2.putText(canvas, f"PS REQ (<=10): <= 10.0 px (COMPLIANT)" if error_px <= 10.0 else "PS REQ (<=10): <= 10.0 px (ALIGNING)", (30, ty + 40),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 230, 115) if error_px <= 10.0 else (0, 165, 255), 1)
         cv2.putText(canvas, f"SLEW RATE   : {slew_rate:4.2f} deg/s (Limit: 5.0)", (30, ty + 60), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 205, 215), 1)
         cv2.putText(canvas, f"THROUGHPUT  : {fps:4.1f} FPS (Target: >= 30)", (30, ty + 80), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 230, 115), 1)
@@ -349,7 +349,7 @@ class PhoenixXSimulator:
         with open(csv_filename, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(["--- PHOENIX-X FSOC TRACKING AUDIT REPORT (ISRO SAC SIH 26169) ---"])
-            writer.writerow(["Metric", "Achieved Value", "ISRO Mandate SLA", "Compliance Status"])
+            writer.writerow(["Metric", "Achieved Value", "PS Requirement Bound", "Compliance Status"])
             writer.writerow(["Simulation Duration (s)", f"{self.history_timestamps[-1]:.2f}" if self.history_timestamps else "0.0", "N/A", "COMPLETED"])
             writer.writerow(["Lock Retention Rate (%)", f"{lock_rate:.2f}%", "> 95.0%", "PASS" if lock_rate >= 95.0 else "REVIEW"])
             writer.writerow(["RMSE Centroid Error (px)", f"{rmse:.3f} px", "<= 10.0 px", "PASS" if rmse <= 10.0 else "FAIL"])
@@ -365,7 +365,7 @@ class PhoenixXSimulator:
         print(f"[+] Simulation session completed!")
         print(f"    Total Frames Simulated : {len(self.history_errors)}")
         print(f"    Lock Retention Rate    : {lock_rate:.2f}%")
-        print(f"    Centroid RMSE Error    : {rmse:.3f} px (ISRO Mandate: <= 10.0 px)")
+        print(f"    Centroid RMSE Error    : {rmse:.3f} px (PS Requirement Target: <= 10.0 px)")
         print(f"    Saved Compliance Report: {csv_filename}")
         print("=" * 70 + "\n")
 

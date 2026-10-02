@@ -265,7 +265,7 @@ def main():
 
         if GIMBAL_STATE["auto_track"]:
             if tracker.loss_frames > 35:
-                # Autonomous Expanding Spiral Re-Acquisition Scan (IEEE ICSOS 2025 PAT standard)
+                # Deterministic Archimedean Spiral Re-Acquisition Scan
                 # When lock is broken by blackout or extreme flare, sweep in an expanding spiral
                 if tracker.loss_frames > 110:
                     tracker.loss_frames = 36 # reset spiral search back to center
@@ -285,7 +285,7 @@ def main():
             cmd_vx = GIMBAL_STATE["manual_vx"]
             cmd_vy = GIMBAL_STATE["manual_vy"]
 
-        # Enforce statutory slew rate limit (5.0 deg/s)
+        # Enforce PS-defined slew rate limit (5.0 deg/s default)
         speed = math.hypot(cmd_vx, cmd_vy)
         if speed > max_slew_px_s:
             scale = max_slew_px_s / speed
@@ -342,7 +342,7 @@ def main():
         bgr = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
         cx, cy = int(CAMERA_WIDTH_PX / 2), int(CAMERA_HEIGHT_PX / 2)
 
-        # Crosshairs & 10px SLA circle
+        # Crosshairs & 10px requirement circle
         cv2.line(bgr, (cx - 20, cy), (cx + 20, cy), (80, 80, 80), 1)
         cv2.line(bgr, (cx, cy - 20), (cx, cy + 20), (80, 80, 80), 1)
         cv2.circle(bgr, (cx, cy), 10, (100, 100, 100), 1)

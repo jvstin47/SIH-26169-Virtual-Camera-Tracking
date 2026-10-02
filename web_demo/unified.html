@@ -256,7 +256,7 @@
           <span id="metric-err-px" class="text-sm font-bold text-white font-mono">0.00</span>
           <span class="text-[10px] text-gray-400">px</span>
         </div>
-        <span class="text-[10px] text-emerald-400 font-mono">SLA: &le; 10.0 px OK</span>
+        <span class="text-[10px] text-emerald-400 font-mono">Bound: &le; 10.0 px OK</span>
       </div>
 
       <div class="glass-card p-2.5 flex flex-col justify-between">
@@ -277,7 +277,7 @@
         <div class="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden mt-0.5">
           <div id="bar-slew" class="h-full bg-amber-400 rounded-full transition-all duration-150" style="width: 0%"></div>
         </div>
-        <span class="text-[9px] text-gray-500 font-mono">Max &le; 5.0&deg;/s statutory clamp</span>
+        <span class="text-[9px] text-gray-500 font-mono">Max &le; 5.0&deg;/s slew clamp</span>
       </div>
 
       <div class="glass-card p-2.5 flex flex-col justify-between">
@@ -286,7 +286,7 @@
           <span id="metric-fps" class="text-sm font-bold text-emerald-400 font-mono">30.0</span>
           <span class="text-[10px] text-gray-400">FPS</span>
         </div>
-        <span class="text-[10px] text-gray-500 font-mono">HIL Real-Time</span>
+        <span class="text-[10px] text-gray-500 font-mono">SIL Real-Time</span>
       </div>
 
       <div class="glass-card p-2.5 flex flex-col justify-between">
@@ -316,7 +316,7 @@
         <div>
           <div class="flex justify-between items-center mb-2 pb-1.5 border-b border-gray-800">
             <span class="text-xs font-bold text-gray-300 uppercase tracking-wide">Master Remote Control Station</span>
-            <span class="text-[10px] text-sky-400 font-mono">CLOSED-LOOP HIL</span>
+            <span class="text-[10px] text-sky-400 font-mono">CLOSED-LOOP SIL</span>
           </div>
 
           <!-- Section Switcher Tabs -->
@@ -379,7 +379,7 @@
                   <span class="px-1 py-0.5 rounded bg-gray-800 text-[10px] font-mono text-amber-400 font-bold border border-gray-700">[1]</span>
                   <span>Noise</span>
                 </div>
-                <span id="badge-ctrl-noise" class="text-[10px] px-1 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono font-bold">10% SLA</span>
+                <span id="badge-ctrl-noise" class="text-[10px] px-1 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-mono font-bold">10% Noise</span>
               </button>
               <button id="btn-ctrl-turb" onclick="sendControl('channel', 'toggle_turbulence')" class="p-1.5 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition active:scale-95" title="Hotkey: 2 (Kolmogorov Turbulence)">
                 <div class="flex items-center gap-1">
@@ -972,7 +972,7 @@
       ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
       ctx.stroke();
 
-      // Statutory 10 px SLA threshold line (dashed green)
+      // PS 10 px threshold line (dashed green)
       const slaY = h * 0.25; // 10 px mapped near top
       ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
       ctx.setLineDash([3, 3]);
@@ -1080,7 +1080,7 @@
         const badgeNoise = document.getElementById('badge-ctrl-noise');
         const badgeCard2Noise = document.getElementById('badge-card2-noise');
         const noisePct = Math.round((data.noise_ratio !== undefined ? data.noise_ratio : 0.10) * 100);
-        if (badgeNoise) badgeNoise.textContent = `${noisePct}% SLA`;
+        if (badgeNoise) badgeNoise.textContent = `${noisePct}% Noise`;
         if (badgeCard2Noise) badgeCard2Noise.textContent = `${noisePct}%`;
         const teleNoiseTag = document.getElementById('tele-noise-tag');
         if (teleNoiseTag) teleNoiseTag.textContent = `${noisePct}% S&P`;

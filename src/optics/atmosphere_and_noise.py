@@ -40,7 +40,7 @@ class OpticalEngine:
         dy = (self.jitter_amplitude * 0.6 * math.cos(2.0 * math.pi * self.jitter_freq_1 * t) +
               self.jitter_amplitude * 0.4 * math.sin(2.0 * math.pi * self.jitter_freq_2 * t) +
               np.random.normal(0, 1.5))
-        # Clamped to statutory +-20 px/frame limit
+        # Clamped to maximum +-20 px/frame physical beam wander bound
         dx = float(np.clip(dx, -20.0, 20.0))
         dy = float(np.clip(dy, -20.0, 20.0))
         return (dx, dy)

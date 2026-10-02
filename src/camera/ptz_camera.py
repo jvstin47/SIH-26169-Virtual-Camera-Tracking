@@ -21,7 +21,7 @@ class VirtualPTZCamera:
         self.vx_deg_s = 0.0
         self.vy_deg_s = 0.0
         
-        # Statutory speed limit (5.0 deg/s default, configurable 5-10 deg/s)
+        # PS-defined speed limit (5.0 deg/s default, configurable 5-10 deg/s)
         self.max_slew_rate_deg_s = DEFAULT_MAX_SLEW_RATE_DEG_S
         self.max_slew_rate_px_s = self.max_slew_rate_deg_s / DEG_PER_PIXEL
 
@@ -38,7 +38,7 @@ class VirtualPTZCamera:
         cmd_vx_deg_s = commanded_vx_px_s * DEG_PER_PIXEL
         cmd_vy_deg_s = commanded_vy_px_s * DEG_PER_PIXEL
         
-        # Enforce statutory slew limit
+        # Enforce PS-defined slew limit
         speed_deg_s = math.hypot(cmd_vx_deg_s, cmd_vy_deg_s)
         if speed_deg_s > self.max_slew_rate_deg_s:
             scale = self.max_slew_rate_deg_s / speed_deg_s

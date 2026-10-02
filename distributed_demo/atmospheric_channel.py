@@ -35,7 +35,7 @@ class AtmosphericChannelEmulator:
         # Channel state toggles
         self.enable_turbulence = True
         self.enable_fog = False
-        self.sp_noise_ratio = 0.10   # Default: ISRO 10% mandate
+        self.sp_noise_ratio = 0.10   # Default: PS-defined 10% baseline condition
         self.enable_scintillation = True
         self.enable_glare = False
         self.dropout_frames = 0
@@ -126,7 +126,7 @@ def main():
     print("[*] Ingesting Satellite Stream from Node A (127.0.0.1:9999)...")
     print("[*] Broadcasting Corrupted Optical Channel to Node B (127.0.0.1:9997)...")
     print("\nInteractive Channel Controls:")
-    print("  [1] Step Impulsive Noise: 0% -> 10% (ISRO SLA) -> 25% (Extreme Solar Storm)")
+    print("  [1] Step Impulsive Noise: 0% -> 10% (PS Baseline) -> 25% (Stress Test)")
     print("  [2] Toggle Kolmogorov Optical Wavefront Turbulence / Heat Shimmer")
     print("  [3] Toggle Heavy Cloud Obscuration & Beer-Lambert Fog Attenuation")
     print("  [4] Trigger Solar Glare / Sensor Blinding Flare")
