@@ -52,42 +52,50 @@ Problem Statement 26169 from ISRO Space Applications Centre (SAC) does **not** a
 
 ## 3. What Phoenix-X Will Model (The Research Core)
 
-Phoenix-X focuses strictly on **Tier 2: Coarse Tracking and Re-acquisition under Closed-Loop Latency**:
+Phoenix-X focuses strictly on **the coarse tracking and reacquisition stage of the PAT chain under closed-loop latency**:
 
 ```mermaid
-flowchart LR
-    A["Physically Defined Beacon<br/>(Airy/Gaussian PSF)"] --> B["Image Formation<br/>(Noise, Jitter, Fading)"]
-    B --> C["Top-Hat / SNR-Adaptive Detector"]
-    C --> D["Sub-Pixel Centroiding"]
-    D --> E["Latency-Compensated State Estimator"]
-    E --> F["Constraint-Bounded PTZ Controller"]
-    E -.-> G["Uncertainty-Guided Reacquisition"]
-    F --> H["Virtual Camera Feedback Loop"]
-    G --> F
+flowchart TD
+    subgraph Benchmark_Spine ["Phoenix-X: Benchmark & Evaluation Spine"]
+        M1["Scenario Engine<br/>(Linear, Circular, Fig-8, Random)"]
+        M2["External MP4 Feed<br/>(Evaluator Benchmark Video)"]
+        M1 --> IF["Image Formation<br/>(Gaussian PSF, Poisson/Read Noise, ~10% S&P, Jitter)"]
+        M2 --> Perc
+        IF --> Perc["Perception (Top-Hat + Subpixel IWC)"]
+    end
+
+    subgraph Core_Contributions ["Hierarchical Contributions"]
+        Perc --> Est["State Estimator (Kalman Covariance)"]
+        Est -->|"Secondary: Latency-Aware Projection"| Ctrl["Constraint-Bounded PTZ (≤5°/s)"]
+        Est -->|"Primary: Uncertainty Ellipse"| Reacq["Uncertainty-Guided Reacquisition"]
+        Reacq --> Ctrl
+    end
+
+    Ctrl --> Cam["Camera Viewport Feedback"]
 ```
 
 ### The 3 Core Research Innovations:
 
-### Innovation 1: Latency-Compensated Predictive Pointing
-In physical optical tracking, closed-loop latency degrades stability far more than detection accuracy:
-$$\tau_{\text{total}} = \tau_{\text{exposure}} + \tau_{\text{readout}} + \tau_{\text{algorithm}} + \tau_{\text{transport}} + \tau_{\text{actuator}}$$
-At 30 FPS, frame exposure and processing consume $\approx 33\ \text{ms}$, while mechanical actuator inertia adds 20–50 ms. Commanding the gimbal based on the *measured* centroid at $t$ introduces pointing lag.
-* **Our Approach**: The state estimator projects the kinematic state forward by the measured system latency:
-  $$\hat{\mathbf{x}}(t + \tau_{\text{total}}) = \mathbf{F}(\tau_{\text{total}}) \hat{\mathbf{x}}(t)$$
-* **Experimental Proof**: Measure tracking RMSE as synthetic transport latency is swept from $0\ \text{ms} \to 150\ \text{ms}$ (comparing No Prediction vs. Standard Kalman vs. Latency-Compensated Kalman).
-
-### Innovation 2: Uncertainty-Guided Re-acquisition
+### Innovation 1 (Primary Contribution): Uncertainty-Guided Re-acquisition
 When an optical link is severed by clouds or severe scintillation fading, deterministic scans (fixed spirals or raster searches) waste time sweeping low-probability regions.
 * **Our Approach**: During signal loss, the state covariance $\mathbf{P}_{k|k}$ propagates outward according to the process noise $\mathbf{Q}$:
   $$\mathbf{P}_{k+1|k} = \mathbf{F} \mathbf{P}_{k|k} \mathbf{F}^T + \mathbf{Q}$$
   The spatial search trajectory is parameterized directly by the eigenvalues $\lambda_1, \lambda_2$ and eigenvectors of the position uncertainty submatrix, expanding along the principal axis of kinematic uncertainty.
-* **Experimental Proof**: Measure re-acquisition latency ($T_{\text{reacq}}$) across 100 Monte Carlo blackout trials comparing:
+* **Experimental Proof**: Measure re-acquisition latency ($T_{\text{reacq}}$) across controlled Monte Carlo blackout trials comparing:
   1. Static Hold (freeze camera)
   2. Fixed Raster Scan
   3. Fixed Archimedean Spiral
   4. **Uncertainty-Guided Adaptive Scan**
 
-### Innovation 3: SNR-Adaptive Beacon Localization
+### Innovation 2 (Secondary Contribution): Latency-Aware Predictive Coarse Pointing
+In physical optical tracking, closed-loop latency degrades stability far more than detection accuracy:
+$$\tau_{\text{total}} = \tau_{\text{exposure}} + \tau_{\text{readout}} + \tau_{\text{algorithm}} + \tau_{\text{transport}} + \tau_{\text{actuator}}$$
+At 30 FPS, frame exposure and processing consume $\approx 33\ \text{ms}$, while mechanical actuator inertia adds 20–50 ms. Commanding the gimbal based on the *measured* centroid at $t$ introduces pointing lag.
+* **Our Approach**: The state estimator projects the kinematic state forward by the measured system latency:
+  $$\hat{\mathbf{x}}(t + \tau_{\text{total}}) = \mathbf{F}(\tau_{\text{total}}) \hat{\mathbf{x}}(t)$$
+* **Experimental Proof**: Measure tracking RMSE and peak pointing error as synthetic transport latency is swept from $0\ \text{ms} \to 200\ \text{ms}$ (comparing No Prediction vs. Standard Kalman vs. Latency-Compensated Kalman).
+
+### Supporting Technique: SNR-Adaptive Beacon Localization
 Rather than deploying an unneeded heavy deep learning network for simple spots, the perception pipeline uses classical matched spatial filtering, bringing in machine learning **only** when classical hypothesis testing encounters ambiguous candidates (stars, sun reflections, multi-point clutter):
 1. Background suppression via morphological Top-Hat transform.
 2. Candidate proposal with dynamic local signal-to-noise ratio estimation:

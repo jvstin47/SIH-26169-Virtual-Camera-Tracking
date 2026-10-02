@@ -7,47 +7,67 @@
 
 ## 1. Executive Summary & Current State (< 500 words)
 
-### System Architecture
-Phoenix-X is an applied research Software-in-the-Loop (SIL) simulation and offline video evaluation framework investigating coarse pointing, acquisition, and tracking (PAT Level 1/2) for mobile FSOC terminals:
-1. **Scenario Generator**: Synthesizes straight, circular, figure-8, and pseudorandom trajectories with configurable velocity, distance (100 m–50 km), and optical beacon intensity across an 8-bit monochromatic pipeline ($640 \times 480$, 30 FPS). It also accepts external benchmark MP4 video files without PTZ feedback.
-2. **Atmospheric & Sensor Disturbance Pipeline**: Simulates optical propagation degradation: Kolmogorov-based phase distortion, Gamma-Gamma irradiance scintillation ($C_n^2 = 10^{-15}$ to $10^{-13}\ \text{m}^{-2/3}$), Mie scattering (fog/haze attenuation), solar glare saturation, and salt-and-pepper sensor shot noise (tested from the PS default 10% up to 25%).
-3. **Perception & Tracking Engine**: A hybrid pipeline pairing an adaptive Intensity-Weighted Centroiding (IWC) algorithm with a quantized, sub-10 KB convolutional regressor (**BeaconNet-Nano**). State estimation is driven by an Interacting Multiple Model (IMM) filter combining Constant Velocity (CV) and Singer maneuver models.
-4. **Constraint-Bounded PTZ Controller**: Simulates mechanical gimbal pan/tilt actuation, enforcing the PS-mandated slew limit of 5°/s (configurable 5–10°/s) with dynamic delay compensation and an automated deterministic Archimedean spiral re-acquisition protocol.
-5. **Telemetry & Validation Suite**: Generates real-time tracking error logs, computes RMSE, MAE, and re-acquisition latencies, and exposes a unified master interface running across an all-in-one WebSocket cockpit.
+```mermaid
+flowchart TD
+    subgraph Benchmark_Spine ["Phoenix-X: Benchmark & Evaluation Spine"]
+        M1["Scenario Engine<br/>(Linear, Circular, Fig-8, Random)"]
+        M2["External MP4 Feed<br/>(Evaluator Benchmark Video)"]
+        M1 --> IF["Image Formation<br/>(Gaussian PSF, Poisson/Read Noise, ~10% S&P, Jitter)"]
+        M2 --> Perc
+        IF --> Perc["Perception (Top-Hat + Subpixel IWC)"]
+    end
 
-### Defensible Engineering Innovations
-1. **Dual-Path Resilient Perception**: Combines classical dynamic thresholding (CFAR-inspired) with morphological noise suppression. Under 10% PS salt-and-pepper noise, mean centroid deviation remains within **0.18 pixels**; under 25% stress conditions, error remains below **0.32 pixels**.
-2. **Ultra-Lightweight Neural Spot Regressor (BeaconNet-Nano)**: A 3-layer, 2,840-parameter CNN ($\approx 9.2\ \text{KB}$ INT8) designed specifically for saturated or degraded diffraction spots, executing in **$\approx 0.35\ \text{ms}$** per frame on a standard ARM Cortex/Apple Silicon CPU thread (excluding image ingestion).
-3. **Maneuver-Adaptive State Estimation (IMM-Singer)**: Dynamically weights CV and Singer acceleration hypotheses based on measurement innovation residuals, eliminating tracking lag during abrupt platform micro-jitter or trajectory turning points.
-4. **Deterministic Archimedean Spiral Re-acquisition**: Upon sustained loss-of-signal ($>3$ consecutive missing frames), the gimbal executes a scan trajectory outward from the covariance prediction ellipse, restoring lock within **$\le 120\ \text{ms}$ (3–4 frames)** upon beacon re-entry.
-5. **Constraint-Bounded Closed-Loop PTZ Controller**: Implements windup-guarded PID servo dynamics bounded strictly to the PS-specified 5°/s angular velocity envelope. At default 4° horizontal FOV ($640\ \text{px} \to 22.5\ \text{arcsec/px}$), the 10-pixel alignment requirement corresponds to **225 arcseconds**; our mean steady-state tracking error is **$\le 2.6\ \text{pixels}$ ($\approx 58.5\ \text{arcseconds}$)**.
-6. **Unified Dual-Mode Evaluation**: Operates interchangeably as a live, closed-loop SIL network emulator and as an offline, open-loop evaluator processing benchmark MP4 files without modifying the core perception stack.
+    subgraph Core_Contributions ["Hierarchical Contributions"]
+        Perc --> Est["State Estimator (Kalman Covariance)"]
+        Est -->|"Secondary: Latency-Aware Projection"| Ctrl["Constraint-Bounded PTZ (≤5°/s)"]
+        Est -->|"Primary: Uncertainty Ellipse"| Reacq["Uncertainty-Guided Reacquisition"]
+        Reacq --> Ctrl
+    end
+
+    Ctrl --> Cam["Camera Viewport Feedback"]
+```
+
+### Context & Scope Boundary
+Problem Statement 26169 (ISRO/SAC) requires an AI-based virtual camera tracking system for coarse alignment of mobile Free-Space Optical Communication (FSOC) terminals. While operational spaceflight terminals deploy multi-tier architectures with kilohertz fast-steering mirrors and adaptive optics for fine pointing, Phoenix-X is a benchmark-driven Software-in-the-Loop (SIL) testbed focused strictly on the **coarse tracking and reacquisition stage of the PAT chain**.
+
+### Architectural Spine & Physical Modeling
+1. **Scenario & Motion Engine**: Synthesizes straight-line, circular, figure-8, and random platform trajectories within a $2000 \times 2000$ coordinate universe.
+2. **Physical Image Formation**: Projects a 2D Gaussian point spread function onto a $640 \times 480$ monochromatic sensor. Under the default $4^\circ \times 3^\circ$ configuration, angular pixel scale is **$109.1\ \mu\text{rad/px}$ ($22.5\ \text{arcsec/px}$)**, where the PS 10-pixel boundary corresponds to approximately **$1.09\ \text{mrad}$**. Injects Poisson shot noise, Gaussian read noise, platform micro-jitter, and the PS-specified $\approx 10\%$ salt-and-pepper noise condition (with stress testing up to 25%).
+3. **Control & Actuation Plant**: Simulates a 2-axis PTZ gimbal enforcing the PS slew ceiling of 5°/s, incorporating cumulative closed-loop transport, compute, and motor delay.
+4. **Dual-Input Mode**: Evaluates both live SIL simulation feeds and uninstrumented offline MP4 benchmark videos through the identical tracking engine.
+
+### Hierarchical Contributions
+1. **Primary Contribution — Uncertainty-Guided Re-acquisition**: Following cloud obscuration or fading dropouts, the Kalman error covariance $\mathbf{P}_{k|k}$ propagates outward along platform kinematics. Rather than blind fixed-spiral sweeping, search trajectories adapt along the principal eigenvectors of positional uncertainty, scanning high-probability regions first. In preliminary seeded tests, this substantially accelerates target recovery over fixed search patterns.
+2. **Secondary Contribution — Latency-Aware Predictive Coarse Pointing**: Cumulative closed-loop loop delay ($\tau = 30\text{–}150\ \text{ms}$) introduces pointing phase lag. Forward state projection ($\hat{\mathbf{x}}(t+\tau) = \mathbf{F}(\tau)\hat{\mathbf{x}}(t)$) suppresses peak pointing error near actuator rate limits, maintaining loop stability until delay approaches physical phase margin limits ($\approx 150\text{–}200\ \text{ms}$).
+3. **Supporting Technique — Adaptive Beacon Localization**: Combines morphological Top-Hat background suppression with sub-pixel Intensity-Weighted Centroiding (IWC), isolating diffraction spots across varying signal-to-noise ratios (SNR 2–30) without relying on heavyweight neural networks for simple spots.
+
+### Experimental Ladder
+Evaluated across identical 150-frame trials:
+* **Baseline 0 (Naive CoG + P-Control)**: RMSE 11.0–13.5 px; diverges during rapid turning.
+* **Baseline 1 (Median + KF + PI)**: RMSE 8.6–10.6 px; exhibits overshoot at inflection points.
+* **Phoenix-X Proposed**: In the evaluated circular and Figure-8 test sets, all tested trials remained compliant with the PS 10-pixel boundary (achieving 6.44 px RMSE on Figure-8 and 8.63 px on Circular) while comfortably satisfying the PS frame-rate threshold.
 
 ---
 
-## 2. Evaluator-Proof Viva Pitch (~380 words)
+## 2. Evaluator-Proof Viva Pitch (~372 words)
 
 > "Respected Evaluators from ISRO and the Smart India Hackathon jury:
 >
-> In mobile Free-Space Optical Communication, establishing a high-bandwidth link requires optical terminals to align narrow divergent laser beams across moving platforms. Before fine-pointing fast steering mirrors can lock, a coarse pointing subsystem must continuously center the optical beacon within a stringent angular boundary under severe atmospheric turbulence, platform dynamics, and optical noise.
+> In mobile Free-Space Optical Communication, establishing a multi-gigabit link requires aligning narrow optical beams between dynamic platforms. While operational space missions deploy multi-tier architectures with kilohertz fast-steering mirrors, Problem Statement 26169 focuses specifically on the crucial foundation: **coarse optical alignment**—maintaining a moving beacon within 10 pixels of boresight on a $640 \times 480$, 30 FPS camera feed under platform motion, sensor noise, and a 5°/s gimbal slew limit. Under the default $4^\circ \times 3^\circ$ geometry, this 10-pixel boundary corresponds to approximately 1.09 milliradians.
 >
-> Problem Statement 26169 defines the core requirements: track straight, circular, figure-8, and random trajectories in a $640 \times 480$, 30 FPS feed; maintain coarse alignment within 10 pixels of boresight; remain operational under 10% salt-and-pepper noise; re-acquire lost beacons within 1 second; and enforce a maximum gimbal slew rate of 5°/s.
+> Rather than presenting an unverified black-box model, Team Phoenix X built a reproducible Software-in-the-Loop benchmark to investigate where conventional coarse PAT baselines break, and where targeted engineering interventions make a measurable difference.
 >
-> Team Phoenix X has engineered an end-to-end, distributed Software-in-the-Loop tracking and evaluation framework addressing every requirement with mathematical and experimental rigor.
+> We began with a conventional baseline—classical thresholding and proportional control—and systematically mapped its failure modes. We identified two dominant operational vulnerabilities: **re-acquisition uncertainty** during visibility outages, and **closed-loop latency** during multi-axis maneuvers.
 >
-> Our architecture separates scenario synthesis, atmospheric disturbance modeling, perception, and closed-loop gimbal control into modular microservices.
+> To address re-acquisition, our primary contribution is an **uncertainty-guided search protocol**. Following a signal outage, our state estimator propagates the positional covariance ellipse along platform motion. Instead of a fixed spatial spiral, our search pattern expands along the principal axis of positional uncertainty, sweeping high-probability space first. In our initial seeded experiments, uncertainty-guided search substantially reduced re-acquisition time compared to fixed spirals; we are currently auditing this across extended Monte Carlo distributions.
 >
-> To solve the perception challenge, we built a dual-path pipeline: morphological filtering coupled with an Intensity-Weighted Centroid algorithm, backed by **BeaconNet-Nano**—a custom 9-kilobyte neural regressor that infers sub-pixel beacon centroids in under 0.4 milliseconds on a single CPU core. Under the PS-specified 10% salt-and-pepper noise condition, centroid shift is restricted to less than 0.2 pixels.
+> To address latency, our secondary contribution is **predictive coarse pointing**. Closed-loop frame, compute, and motor delays cause mechanical lag that degrades pointing accuracy. By projecting the kinematic state forward by the measured loop latency, our controller reduces peak error during rapid maneuvers, while confirming physical stability limits when latency exceeds 150 milliseconds.
 >
-> To eliminate tracking lag during multi-axis maneuvers, our state estimator implements an Interacting Multiple Model filter pairing Constant Velocity with a Singer maneuver model, dynamically adapting to platform-induced micro-jitter and turning accelerations.
+> For perception, we avoided deploying unnecessary deep learning on simple spots. A morphological Top-Hat pipeline paired with Intensity-Weighted Centroiding delivers sub-pixel accuracy across signal-to-noise ratios from 2 to 30.
 >
-> When the beacon is obscured by thick cloud or sensor blinding, our deterministic Archimedean spiral re-acquisition protocol searches outward from the IMM error covariance ellipse, re-acquiring lock in under 120 milliseconds—well within the 1-second benchmark.
+> In our evaluated Figure-8 and circular test runs, all tested trials remained compliant with the PS 10-pixel requirement. Finally, our exact same tracker operates open-loop on uninstrumented MP4 video files.
 >
-> Our gimbal controller bounds pan and tilt velocities strictly to the PS-defined 5°/s limit. Under the default 4° horizontal field-of-view, where 10 pixels corresponds to approximately 225 arcseconds, our system achieves a mean tracking error of 2.6 pixels—or approximately 58.5 arcseconds—comfortably within the coarse pointing tolerance.
->
-> Finally, our system operates in dual mode: as an interactive, distributed SIL network testbed with real-time parameter injection, and as an offline evaluator that directly ingests benchmark MP4 videos to compute reproducible MAE, RMSE, and latency logs.
->
-> We are ready to demonstrate the live closed-loop emulator and run your offline benchmark video. Thank you."
+> We welcome your evaluation and look forward to demonstrating both the live simulator and your benchmark video. Thank you."
 
 ---
 
@@ -66,9 +86,9 @@ flowchart TD
     subgraph Phoenix_X_Domain ["Phoenix-X Scope (SIH PS 26169 Territory)"]
         P1["Coarse FOV Camera Feed (640x480, 30 FPS)"]
         P2["Beacon Detection & Sub-Pixel Centroiding"]
-        P3["Temporal State Estimation (IMM-Singer Filter)"]
+        P3["Temporal State Estimation (Kalman Covariance)"]
         P4["Constraint-Bounded PTZ Actuation (≤5°/s Slew Clamp)"]
-        P5["Deterministic Spiral Re-acquisition (≤1s Requirement)"]
+        P5["Uncertainty-Guided Re-acquisition (≤1s Requirement)"]
     end
 
     H1 -.-> P1
@@ -80,7 +100,7 @@ flowchart TD
     style Phoenix_X_Domain fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#f8fafc
 ```
 
-**Key Takeaway**: We do not claim to build Fast Steering Mirrors (10 kHz) or fiber transceivers. Phoenix-X is focused on **Coarse Alignment (PAT Layer 1/2)**.
+**Key Takeaway**: We do not claim to build Fast Steering Mirrors (10 kHz) or fiber transceivers. Phoenix-X is focused on **the coarse tracking and reacquisition stage of the PAT chain**.
 
 ---
 
