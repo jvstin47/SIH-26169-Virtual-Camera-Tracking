@@ -2,17 +2,20 @@
 .DS_Store
 Thumbs.db
 
-# Python
+# Python bytecode & cache
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+
+# Virtual environments
 env/
 venv/
 .venv/
+
+# Build artifacts & packages
 build/
-develop-eggs/
 dist/
 downloads/
 eggs/
@@ -26,16 +29,19 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.iconset/
 
-# IDE
+# Binary distributions (built locally or downloaded)
+*.dmg
+*.zip
+
+# IDE configurations
 .idea/
 .vscode/
 *.swp
 *.swo
 
-# Project logs and outputs
+# Project runtime logs and generated reports
 logs/
 *.log
 output_reports/
-*.dmg
-*.zip

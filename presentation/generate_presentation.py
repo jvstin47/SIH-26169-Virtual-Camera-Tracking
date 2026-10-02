@@ -51,8 +51,8 @@ def add_header_banner(slide, sub_title_text):
     p.font.color.rgb = TEXT_MUTED
 
 def generate_deck():
-    input_path = "phoenix format.pptx"
-    output_path = "Phoenix_X_SIH26169_Submission.pptx"
+    input_path = "presentation/phoenix_format.pptx"
+    output_path = "presentation/Phoenix_X_SIH26169_Submission.pptx"
     
     if not os.path.exists(input_path):
         print(f"[!] Error: {input_path} not found.")

@@ -26,8 +26,8 @@ from pptx.dml.color import RGBColor
 from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE, MSO_CONNECTOR
 
-BASE_PPTX = "Phoenix_X_SIH26169_Improved.pptx"
-FINAL_PPTX = "Phoenix_X_SIH26169_Final.pptx"
+BASE_PPTX = "presentation/Phoenix_X_SIH26169_Improved.pptx"
+FINAL_PPTX = "presentation/Phoenix_X_SIH26169_Final.pptx"
 IMG_DIR = "submission_images"
 
 # --- PASTEL COLOR PALETTE ---

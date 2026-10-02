@@ -9,7 +9,7 @@ Saves the finalized deck as Phoenix_X_SIH26169_Final.pptx.
 import pptx
 
 def amend_presentation():
-    prs = pptx.Presentation("Phoenix_X_SIH26169_Improved.pptx")
+    prs = pptx.Presentation("presentation/Phoenix_X_SIH26169_Improved.pptx")
     
     # -------------------------------------------------------------
     # SLIDE 3: Technical Approach
@@ -47,8 +47,8 @@ def amend_presentation():
                     p.text = "Tactical Dual-Viewport Cockpit & Live Web Radar Mission Control (localhost:8080)"
                     print("[+] Slide 6: Updated Cockpit subsystem bullet.")
 
-    prs.save("Phoenix_X_SIH26169_Final.pptx")
-    print("[+] Successfully saved finalized deck as: Phoenix_X_SIH26169_Final.pptx")
+    prs.save("presentation/Phoenix_X_SIH26169_Final.pptx")
+    print("[+] Successfully saved finalized deck as: presentation/Phoenix_X_SIH26169_Final.pptx")
 
 if __name__ == '__main__':
     amend_presentation()
