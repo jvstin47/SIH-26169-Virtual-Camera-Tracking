@@ -1,0 +1,21 @@
+{
+  "dataset_name": "Phoenix-X-FSOC-Synthetic-Dataset-LEO_TO_GROUND",
+  "generator_version": "2.0.0",
+  "problem_statement": "SIH 26169 (ISRO / SAC)",
+  "sensor_specifications": {
+    "resolution": "640x480",
+    "fpa_format": "Monochrome CMOS / InGaAs PIN",
+    "fov_azimuth_deg": 4.0,
+    "fov_elevation_deg": 3.0,
+    "angular_scale_arcsec_per_px": 22.5,
+    "frame_rate_hz": 20.0
+  },
+  "optical_channel_disturbances": {
+    "salt_and_pepper_noise_ratio": 0.1,
+    "beer_lambert_extinction": "Active",
+    "poisson_shot_noise": "Active",
+    "multi_harmonic_platform_jitter": "\u00b120 px/frame"
+  },
+  "total_frames_generated": 60,
+  "csv_manifest_path": "data/synthetic_dataset/ground_truth.csv"
+}

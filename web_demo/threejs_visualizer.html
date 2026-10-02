@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phoenix-X: 3D WebGL Orbit & Target Lock Visualizer (Three.js)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js + OrbitControls from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    body { background-color: #06090e; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+    .hud-panel { background: rgba(13, 19, 29, 0.88); backdrop-filter: blur(10px); border: 1px solid #1e293b; border-radius: 8px; }
+  </style>
+</head>
+<body class="w-screen h-screen relative select-none">
+
+  <!-- 3D WebGL Viewport Canvas -->
+  <div id="canvas-container" class="absolute inset-0 w-full h-full"></div>
+
+  <!-- Top Aerospace Header -->
+  <header class="absolute top-3 left-4 right-4 flex items-center justify-between z-10 pointer-events-none">
+    <div class="flex items-center gap-3">
+      <span class="px-2.5 py-1 text-xs font-bold rounded bg-sky-950 text-sky-400 border border-sky-800 pointer-events-auto">3D WEBGL ENGINE</span>
+      <h1 class="text-base font-bold text-white tracking-wide">PHOENIX-X: 3D ORBIT TRACKING & GIMBAL LOCK MATRIX</h1>
+    </div>
+    <div class="flex items-center gap-3 pointer-events-auto">
+      <a href="live.html" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">2D Live Cockpit</a>
+      <a href="index.html" class="text-xs px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">Simulator</a>
+      <span class="text-xs px-2.5 py-1 rounded bg-orange-950 text-orange-400 border border-orange-800 font-semibold">ISRO SAC SIH 26169</span>
+    </div>
+  </header>
+
+  <!-- Left Floating Panel: Target Lock Matrix & Angular Error Metrics -->
+  <div class="absolute top-16 left-4 w-80 flex flex-col gap-3 z-10">
+    
+    <!-- Target Lock Matrix Card -->
+    <div class="hud-panel p-3">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Target Lock Matrix</span>
+        <span id="lock-state-badge" class="text-[10px] px-2 py-0.5 rounded font-bold bg-emerald-950 text-emerald-400 border border-emerald-800 animate-pulse">LOCKED (≤ 10 px)</span>
+      </div>
+      
+      <!-- 4-Quadrant Lock Matrix Grid -->
+      <div class="grid grid-cols-2 gap-2 text-center text-xs">
+        <div class="p-2 rounded bg-black/40 border border-slate-800">
+          <div class="text-[9px] text-gray-400 uppercase">Azimuth Slew</div>
+          <div id="metric-az" class="text-sm font-bold text-sky-400 mt-0.5">142.4°</div>
+          <div id="metric-az-rate" class="text-[10px] text-emerald-400">Rate: +2.18°/s</div>
+        </div>
+        <div class="p-2 rounded bg-black/40 border border-slate-800">
+          <div class="text-[9px] text-gray-400 uppercase">Elevation Slew</div>
+          <div id="metric-el" class="text-sm font-bold text-sky-400 mt-0.5">48.6°</div>
+          <div id="metric-el-rate" class="text-[10px] text-emerald-400">Rate: +1.42°/s</div>
+        </div>
+        <div class="p-2 rounded bg-black/40 border border-slate-800">
+          <div class="text-[9px] text-gray-400 uppercase">Centroid Error</div>
+          <div id="metric-err-px" class="text-sm font-extrabold text-amber-400 mt-0.5">0.18 px</div>
+          <div id="metric-err-arcsec" class="text-[10px] text-gray-400">4.1 arcsec</div>
+        </div>
+        <div class="p-2 rounded bg-black/40 border border-slate-800">
+          <div class="text-[9px] text-gray-400 uppercase">Slant Range</div>
+          <div id="metric-range" class="text-sm font-bold text-purple-400 mt-0.5">684.2 km</div>
+          <div class="text-[10px] text-gray-400">LEO 550 km</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gimbal Motor Dynamics & Slew Rate Response -->
+    <div class="hud-panel p-3">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">Gimbal Motor Slew Response</div>
+      
+      <div class="flex justify-between text-xs text-gray-300 mb-1">
+        <span>Instantaneous Velocity:</span>
+        <span id="metric-slew-total" class="font-bold text-sky-400">2.60 °/s</span>
+      </div>
+      <!-- Slew Bar (Clamped to 5.0 deg/s) -->
+      <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden mb-2">
+        <div id="slew-bar" class="bg-sky-400 h-2 rounded-full transition-all duration-75" style="width: 52%"></div>
+      </div>
+      <div class="flex justify-between text-[10px] text-gray-400">
+        <span>0.0 °/s</span>
+        <span class="text-amber-400 font-semibold">ISRO Mandate Limit: 5.0 °/s (Clamped)</span>
+        <span>5.0 °/s</span>
+      </div>
+    </div>
+
+    <!-- Real-Time Camera Focal-Plane Array (FPA) Crop Preview -->
+    <div class="hud-panel p-3">
+      <div class="flex justify-between items-center mb-1.5">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Active Camera FPA (640x480)</span>
+        <span class="text-[10px] text-emerald-400 font-mono">30 FPS</span>
+      </div>
+      <div class="relative w-full aspect-[4/3] bg-black rounded border border-slate-800 overflow-hidden">
+        <canvas id="fpa-canvas" width="320" height="240" class="w-full h-full object-contain"></canvas>
+      </div>
+      <div class="flex justify-between items-center mt-1.5 text-[10px] text-gray-400">
+        <span>Gaussian Gray-Diffusion Centroid</span>
+        <span class="text-sky-400">σ &lt; 0.2 px</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Floating Panel: Controls & Scenario Switcher -->
+  <div class="absolute bottom-4 left-4 right-4 flex items-center justify-between hud-panel p-2.5 z-10">
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-bold text-gray-400 mr-1">SCENARIO:</span>
+      <button onclick="setScenario('leo')" id="btn-leo" class="px-3 py-1 text-xs font-bold rounded bg-sky-900 text-sky-300 border border-sky-700">LEO Satellite Overpass</button>
+      <button onclick="setScenario('uav')" id="btn-uav" class="px-3 py-1 text-xs font-bold rounded bg-slate-800 hover:bg-slate-700 text-gray-300 border border-slate-700">Airborne UAV (Fig-8)</button>
+      <button onclick="setScenario('oisl')" id="btn-oisl" class="px-3 py-1 text-xs font-bold rounded bg-slate-800 hover:bg-slate-700 text-gray-300 border border-slate-700">Inter-Satellite Crosslink</button>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button onclick="toggleNoise()" id="btn-noise" class="px-2.5 py-1 text-xs font-semibold rounded bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700">
+        10% S&P Noise: OFF
+      </button>
+      <button onclick="toggleFog()" id="btn-fog" class="px-2.5 py-1 text-xs font-semibold rounded bg-slate-800 text-gray-300 border border-slate-700 hover:bg-slate-700">
+        Beer-Lambert Fog: OFF
+      </button>
+      <button onclick="resetCameraView()" class="px-2.5 py-1 text-xs font-semibold rounded bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 border border-indigo-700">
+        Reset 3D View
+      </button>
+    </div>
+  </div>
+
+  <!-- Three.js Visualizer Script -->
+  <script>
+    // --- 3D Scene Initialization ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x06090e, 0.0008);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 5000);
+    camera.position.set(0, 450, 850);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxDistance = 2500;
+    controls.minDistance = 150;
+
+    // --- Lighting ---
+    const ambientLight = new THREE.AmbientLight(0x223344, 1.2);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+    dirLight.position.set(500, 600, 400);
+    scene.add(dirLight);
+
+    // --- Starfield Background ---
+    const starGeo = new THREE.BufferGeometry();
+    const starCount = 1500;
+    const starPos = new Float32Array(starCount * 3);
+    for(let i=0; i<starCount*3; i++) {
+      starPos[i] = (Math.random() - 0.5) * 4000;
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    const starMat = new THREE.PointsMaterial({ color: 0x8899aa, size: 1.5 });
+    const stars = new THREE.Points(starGeo, starMat);
+    scene.add(stars);
+
+    // --- Earth Sphere with Wireframe Grid ---
+    const earthRadius = 260;
+    const earthGeo = new THREE.SphereGeometry(earthRadius, 48, 48);
+    const earthMat = new THREE.MeshPhongMaterial({
+      color: 0x0f1c2e,
+      emissive: 0x050c18,
+      specular: 0x1a3350,
+      shininess: 15,
+      wireframe: false
+    });
+    const earth = new THREE.Mesh(earthGeo, earthMat);
+    scene.add(earth);
+
+    // Earth Coordinate Grid Wireframe
+    const wireGeo = new THREE.SphereGeometry(earthRadius * 1.002, 24, 24);
+    const wireMat = new THREE.MeshBasicMaterial({ color: 0x1d3557, wireframe: true, transparent: true, opacity: 0.35 });
+    const earthWire = new THREE.Mesh(wireGeo, wireMat);
+    scene.add(earthWire);
+
+    // --- Ground Optical Tracking Station (Ahmedabad / Equatorial Node) ---
+    const groundLat = 23.0 * (Math.PI / 180);
+    const groundLon = 72.5 * (Math.PI / 180);
+    const groundPos = new THREE.Vector3(
+      earthRadius * Math.cos(groundLat) * Math.sin(groundLon),
+      earthRadius * Math.sin(groundLat),
+      earthRadius * Math.cos(groundLat) * Math.cos(groundLon)
+    );
+
+    const groundPinGeo = new THREE.CylinderGeometry(2, 6, 12, 16);
+    const groundPinMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+    const groundStation = new THREE.Mesh(groundPinGeo, groundPinMat);
+    groundStation.position.copy(groundPos);
+    groundStation.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), groundPos.clone().normalize());
+    scene.add(groundStation);
+
+    // Ground Station Base Ring
+    const ringGeo = new THREE.RingGeometry(8, 18, 32);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0x0284c7, side: THREE.DoubleSide, transparent: true, opacity: 0.6 });
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+    ringMesh.position.copy(groundPos);
+    ringMesh.quaternion.copy(groundStation.quaternion);
+    ringMesh.rotateX(Math.PI / 2);
+    scene.add(ringMesh);
+
+    // --- Satellite Mesh & Solar Arrays ---
+    const satGroup = new THREE.Group();
+    const satBodyGeo = new THREE.BoxGeometry(10, 12, 10);
+    const satBodyMat = new THREE.MeshPhongMaterial({ color: 0xf59e0b, specular: 0xffffff });
+    const satBody = new THREE.Mesh(satBodyGeo, satBodyMat);
+    satGroup.add(satBody);
+
+    const panelGeo = new THREE.BoxGeometry(32, 1, 10);
+    const panelMat = new THREE.MeshPhongMaterial({ color: 0x1e3a8a, specular: 0x3b82f6 });
+    const solarPanels = new THREE.Mesh(panelGeo, panelMat);
+    satGroup.add(solarPanels);
+    scene.add(satGroup);
+
+    // --- Orbit Trajectory Curve ---
+    const orbitPoints = [];
+    const orbitRadius = earthRadius + 140; // 550 km scaled
+    for(let i=0; i<=180; i++) {
+      const rad = (i / 180) * Math.PI * 2;
+      orbitPoints.push(new THREE.Vector3(
+        orbitRadius * Math.cos(rad),
+        orbitRadius * Math.sin(rad) * 0.72,
+        orbitRadius * Math.sin(rad) * 0.68
+      ));
+    }
+    const orbitCurveGeo = new THREE.BufferGeometry().setFromPoints(orbitPoints);
+    const orbitCurveMat = new THREE.LineBasicMaterial({ color: 0x475569, transparent: true, opacity: 0.5 });
+    const orbitLine = new THREE.Line(orbitCurveGeo, orbitCurveMat);
+    scene.add(orbitLine);
+
+    // --- Dynamic Optical Laser Link Beam ---
+    const laserMat = new THREE.LineBasicMaterial({ color: 0x10b981, linewidth: 2 });
+    const laserGeo = new THREE.BufferGeometry().setFromPoints([groundPos, groundPos]);
+    const laserLine = new THREE.Line(laserGeo, laserMat);
+    scene.add(laserLine);
+
+    // Optical Beam Glow Cylinder
+    const beamGeo = new THREE.CylinderGeometry(0.8, 3.5, 1, 16);
+    const beamMat = new THREE.MeshBasicMaterial({ color: 0x34d399, transparent: true, opacity: 0.35, wireframe: true });
+    const beamMesh = new THREE.Mesh(beamGeo, beamMat);
+    scene.add(beamMesh);
+
+    // --- FPA Canvas 2D Elements ---
+    const fpaCanvas = document.getElementById('fpa-canvas');
+    const fpaCtx = fpaCanvas.getContext('2d');
+
+    // --- State Variables ---
+    let currentScenario = 'leo';
+    let enableSPNoise = false;
+    let enableFog = false;
+    let simTime = 0;
+
+    // --- Telemetry UI Elements ---
+    const elAz = document.getElementById('metric-az');
+    const elAzRate = document.getElementById('metric-az-rate');
+    const elEl = document.getElementById('metric-el');
+    const elElRate = document.getElementById('metric-el-rate');
+    const elErrPx = document.getElementById('metric-err-px');
+    const elErrArc = document.getElementById('metric-err-arcsec');
+    const elRange = document.getElementById('metric-range');
+    const elSlewTotal = document.getElementById('metric-slew-total');
+    const slewBar = document.getElementById('slew-bar');
+    const lockBadge = document.getElementById('lock-state-badge');
+
+    // --- Scenario Switcher ---
+    function setScenario(sc) {
+      currentScenario = sc;
+      document.querySelectorAll('#btn-leo, #btn-uav, #btn-oisl').forEach(b => {
+        b.className = 'px-3 py-1 text-xs font-bold rounded bg-slate-800 hover:bg-slate-700 text-gray-300 border border-slate-700';
+      });
+      document.getElementById('btn-' + sc).className = 'px-3 py-1 text-xs font-bold rounded bg-sky-900 text-sky-300 border border-sky-700';
+    }
+
+    function toggleNoise() {
+      enableSPNoise = !enableSPNoise;
+      const btn = document.getElementById('btn-noise');
+      btn.innerText = `10% S&P Noise: ${enableSPNoise ? 'ACTIVE' : 'OFF'}`;
+      btn.className = `px-2.5 py-1 text-xs font-semibold rounded border ${enableSPNoise ? 'bg-emerald-950 text-emerald-300 border-emerald-700' : 'bg-slate-800 text-gray-300 border-slate-700'}`;
+    }
+
+    function toggleFog() {
+      enableFog = !enableFog;
+      const btn = document.getElementById('btn-fog');
+      btn.innerText = `Beer-Lambert Fog: ${enableFog ? 'ACTIVE' : 'OFF'}`;
+      btn.className = `px-2.5 py-1 text-xs font-semibold rounded border ${enableFog ? 'bg-emerald-950 text-emerald-300 border-emerald-700' : 'bg-slate-800 text-gray-300 border-slate-700'}`;
+    }
+
+    function resetCameraView() {
+      camera.position.set(0, 450, 850);
+      controls.target.set(0, 0, 0);
+    }
+
+    // --- Main 3D Animation Loop ---
+    function animate() {
+      requestAnimationFrame(animate);
+      simTime += 0.012;
+
+      // 1. Calculate Satellite Position
+      let satX, satY, satZ;
+      if (currentScenario === 'uav') {
+        // UAV low-altitude pattern near ground station
+        const uavAngle = simTime * 1.5;
+        satX = groundPos.x + 85 * Math.cos(uavAngle);
+        satY = groundPos.y + 40 + 15 * Math.sin(uavAngle * 2);
+        satZ = groundPos.z + 85 * Math.sin(uavAngle) * Math.cos(uavAngle);
+      } else {
+        // LEO Satellite Orbit
+        const satAngle = simTime * 0.45;
+        satX = orbitRadius * Math.cos(satAngle);
+        satY = orbitRadius * Math.sin(satAngle) * 0.72;
+        satZ = orbitRadius * Math.sin(satAngle) * 0.68;
+      }
+
+      satGroup.position.set(satX, satY, satZ);
+      satGroup.lookAt(groundPos);
+
+      // 2. Update Laser Beam & Cone
+      const laserPts = [groundPos, satGroup.position];
+      laserLine.geometry.setFromPoints(laserPts);
+
+      const beamDist = groundPos.distanceTo(satGroup.position);
+      beamMesh.position.copy(groundPos.clone().lerp(satGroup.position, 0.5));
+      beamMesh.scale.set(1, beamDist, 1);
+      beamMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), satGroup.position.clone().sub(groundPos).normalize());
+
+      // 3. Compute Topocentric Metrics
+      const slantRangeKm = (beamDist * 2.35).toFixed(1);
+      const azDeg = ((Math.atan2(satX - groundPos.x, satZ - groundPos.z) * 180 / Math.PI) + 360) % 360;
+      const elDeg = Math.max(12.0, Math.min(84.0, (Math.asin((satY - groundPos.y) / beamDist) * 180 / Math.PI)));
+      
+      const azRate = (Math.sin(simTime * 2) * 1.8 + 1.2).toFixed(2);
+      const elRate = (Math.cos(simTime * 2) * 1.4).toFixed(2);
+      const totalSlew = Math.min(5.0, Math.hypot(parseFloat(azRate), parseFloat(elRate))).toFixed(2);
+
+      // Simulated Sub-Pixel Tracking Error
+      const residualNoise = enableSPNoise ? 0.35 : 0.12;
+      const errPx = (0.15 + Math.abs(Math.sin(simTime * 5)) * residualNoise).toFixed(2);
+      const errArcsec = (errPx * 22.5).toFixed(1);
+
+      // Update Telemetry Panel
+      elAz.innerText = `${azDeg.toFixed(1)}°`;
+      elAzRate.innerText = `Rate: ${azRate}°/s`;
+      elEl.innerText = `${elDeg.toFixed(1)}°`;
+      elElRate.innerText = `Rate: ${elRate}°/s`;
+      elErrPx.innerText = `${errPx} px`;
+      elErrArc.innerText = `${errArcsec} arcsec`;
+      elRange.innerText = `${slantRangeKm} km`;
+      elSlewTotal.innerText = `${totalSlew} °/s`;
+      slewBar.style.width = `${(parseFloat(totalSlew) / 5.0) * 100}%`;
+
+      const isLocked = parseFloat(errPx) <= 10.0;
+      lockBadge.innerText = isLocked ? `LOCKED (${errPx} px)` : 'ALIGNING...';
+
+      // 4. Render 2D FPA Camera Feed
+      drawFPACrop(parseFloat(errPx));
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // --- Render FPA Optical Sensor Viewport ---
+    function drawFPACrop(err) {
+      const w = fpaCanvas.width;
+      const h = fpaCanvas.height;
+      const cx = w / 2;
+      const cy = h / 2;
+
+      // Background (Fog/Clear)
+      fpaCtx.fillStyle = enableFog ? '#343f50' : '#080a0e';
+      fpaCtx.fillRect(0, 0, w, h);
+
+      // Grid crosshairs
+      fpaCtx.strokeStyle = '#1e293b';
+      fpaCtx.lineWidth = 1;
+      fpaCtx.beginPath();
+      fpaCtx.moveTo(cx, 0); fpaCtx.lineTo(cx, h);
+      fpaCtx.moveTo(0, cy); fpaCtx.lineTo(w, cy);
+      fpaCtx.stroke();
+
+      // Salt and Pepper Noise
+      if (enableSPNoise) {
+        fpaCtx.fillStyle = '#ffffff';
+        for (let i = 0; i < 180; i++) {
+          fpaCtx.fillRect(Math.random() * w, Math.random() * h, 1.2, 1.2);
+        }
+        fpaCtx.fillStyle = '#000000';
+        for (let i = 0; i < 180; i++) {
+          fpaCtx.fillRect(Math.random() * w, Math.random() * h, 1.2, 1.2);
+        }
+      }
+
+      // True Spot Coordinates
+      const spotX = cx + (Math.sin(simTime * 3) * err * 8);
+      const spotY = cy + (Math.cos(simTime * 3) * err * 8);
+
+      // Diffraction Airy Disc Spot (Gaussian gradient)
+      const grad = fpaCtx.createRadialGradient(spotX, spotY, 1, spotX, spotY, 12);
+      grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      grad.addColorStop(0.3, 'rgba(56, 189, 248, 0.9)');
+      grad.addColorStop(0.8, 'rgba(14, 116, 144, 0.3)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      fpaCtx.fillStyle = grad;
+      fpaCtx.beginPath();
+      fpaCtx.arc(spotX, spotY, 14, 0, Math.PI * 2);
+      fpaCtx.fill();
+
+      // Tracking Reticle Lock Box (Green)
+      fpaCtx.strokeStyle = '#10b981';
+      fpaCtx.lineWidth = 1.2;
+      fpaCtx.strokeRect(spotX - 10, spotY - 10, 20, 20);
+
+      // Center crosshair
+      fpaCtx.fillStyle = '#fbbf24';
+      fpaCtx.beginPath();
+      fpaCtx.arc(spotX, spotY, 1.5, 0, Math.PI * 2);
+      fpaCtx.fill();
+
+      // Error line
+      fpaCtx.strokeStyle = '#f97316';
+      fpaCtx.beginPath();
+      fpaCtx.moveTo(cx, cy);
+      fpaCtx.lineTo(spotX, spotY);
+      fpaCtx.stroke();
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>

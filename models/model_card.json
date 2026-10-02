@@ -1,0 +1,18 @@
+{
+  "model_architecture": "BeaconNet-Nano",
+  "precision_formats": [
+    "FP32",
+    "FP16 (TensorRT)",
+    "INT8 (Quantized)"
+  ],
+  "input_dimensions": "1x1x240x320",
+  "parameters": 2417,
+  "memory_footprint_kb": 9.67,
+  "onnx_export_path": "models/beacon_saliency_net.onnx",
+  "tensorrt_script": "scripts/convert_tensorrt.sh",
+  "benchmarked_latency": {
+    "CPU_NumPy_SIMD": "1.8 ms",
+    "ONNX_Runtime_CPU": "1.2 ms",
+    "TensorRT_Jetson_FP16": "0.32 ms"
+  }
+}
