@@ -6,15 +6,18 @@
   <title>Phoenix-X: Unified Autonomous Multi-Node Mission Control</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background-color: #080d14; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; }
-    .glass-card { background: #0f1724; border: 1px solid #1e293b; border-radius: 10px; }
-    .glass-card-glow { background: #0f1724; border: 1px solid #0284c7; box-shadow: 0 0 15px rgba(2, 132, 199, 0.15); border-radius: 10px; }
-    .feed-container { background: #000000; border: 1px solid #1e293b; position: relative; overflow: hidden; border-radius: 8px; }
-    .term-window { background: #030712; font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
+    body { background-color: #070b12; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; }
+    .glass-card { background: #0e1522; border: 1px solid #1e293b; border-radius: 10px; contain: content; }
+    .glass-card-glow { background: #0e1522; border: 1px solid #0284c7; box-shadow: 0 0 15px rgba(2, 132, 199, 0.2); border-radius: 10px; }
+    .feed-container { background: #020408; border: 1px solid #1e293b; position: relative; overflow: hidden; border-radius: 8px; cursor: pointer; }
+    .feed-container:hover { border-color: #38bdf8; }
+    .feed-img { image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; width: 100%; height: 100%; object-fit: contain; }
+    .term-window { background: #02050b; font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #080d14; }
+    ::-webkit-scrollbar-track { background: #070b12; }
     ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #334155; }
+    .sparkline-canvas { width: 100%; height: 42px; display: block; }
   </style>
 </head>
 <body class="p-3 select-none flex flex-col min-h-screen">
@@ -22,9 +25,9 @@
   <!-- ===================================================================== -->
   <!-- Top Navigation & Status Bar                                           -->
   <!-- ===================================================================== -->
-  <header class="glass-card px-4 py-3 mb-3 flex flex-wrap items-center justify-between gap-3 border-sky-900/50">
+  <header class="glass-card px-4 py-3 mb-3 flex flex-wrap items-center justify-between gap-3 border-sky-900/60 shadow-lg shadow-black/40">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded bg-gradient-to-tr from-sky-600 to-emerald-400 flex items-center justify-center font-black text-black text-sm tracking-tighter">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 via-teal-400 to-emerald-400 flex items-center justify-center font-black text-black text-sm tracking-tighter shadow-md shadow-sky-500/20">
         PX
       </div>
       <div>
@@ -44,21 +47,21 @@
       </div>
       <div id="stat-node-b" class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-950/70 border border-amber-800 text-amber-300">
         <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-        <span class="font-bold">NODE B:</span> ATMOSPHERE (TURBULENT)
+        <span class="font-bold">NODE B:</span> CHANNEL (TURBULENT)
       </div>
       <div id="stat-node-c" class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-950/70 border border-emerald-800 text-emerald-300">
         <span id="dot-lock" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span class="font-bold">NODE C:</span> GROUND TRACKER (<span id="txt-lock-status">LOCKED</span>)
+        <span class="font-bold">NODE C:</span> TRACKER (<span id="txt-lock-status">LOCKED</span>)
       </div>
     </div>
 
     <!-- View Modes & Emergency Stop -->
     <div class="flex items-center gap-2">
-      <div class="flex rounded bg-gray-900 p-0.5 border border-gray-800 text-xs">
-        <button id="btn-view-matrix" onclick="switchView('matrix')" class="px-2.5 py-1 rounded font-semibold bg-sky-600 text-white transition">3-Node Matrix</button>
-        <button id="btn-view-3d" onclick="switchView('3d')" class="px-2.5 py-1 rounded font-semibold text-gray-400 hover:text-white transition">3D Orbit WebGL</button>
+      <div class="flex rounded-lg bg-gray-900 p-0.5 border border-gray-800 text-xs">
+        <button id="btn-view-matrix" onclick="switchView('matrix')" class="px-3 py-1 rounded-md font-semibold bg-sky-600 text-white transition">3-Node Matrix</button>
+        <button id="btn-view-3d" onclick="switchView('3d')" class="px-3 py-1 rounded-md font-semibold text-gray-400 hover:text-white transition">3D Orbit WebGL</button>
       </div>
-      <button onclick="emergencyShutdown()" class="text-xs px-2.5 py-1.5 rounded font-bold bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800 transition flex items-center gap-1">
+      <button onclick="emergencyShutdown()" class="text-xs px-3 py-1.5 rounded-lg font-bold bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800 transition flex items-center gap-1 shadow-sm">
         <span>🛑</span> Shutdown
       </button>
     </div>
@@ -81,11 +84,12 @@
           </div>
           <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950 border border-sky-800 text-sky-300">2000x2000 RADAR</span>
         </div>
-        <div class="feed-container aspect-[4/3] flex items-center justify-center">
-          <img id="feed-a" src="/stream/node_a" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%2338bdf8\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Node A (UDP 9999)...</text></svg>'" class="w-full h-full object-contain">
-          <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/70 border border-gray-800 text-[10px] font-mono text-gray-300">
+        <div class="feed-container aspect-[4/3] flex items-center justify-center" onclick="openLightbox('feed-a', 'Terminal 1: Node A Satellite Radar (2000x2000)')">
+          <img id="feed-a" src="/stream/node_a" alt="Node A Feed" class="feed-img" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%2338bdf8\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Node A (UDP 9999)...</text></svg>'">
+          <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-sm border border-gray-800 text-[10px] font-mono text-gray-300">
             RADAR: <span id="tele-cam-pos">1000.0, 1000.0</span>
           </div>
+          <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 text-[9px] text-gray-400 font-mono">Click to zoom</div>
         </div>
       </div>
 
@@ -96,13 +100,14 @@
             <span class="w-2 h-2 rounded-full bg-amber-400"></span>
             <span class="text-xs font-bold text-amber-400 uppercase tracking-wide">Terminal 2: Active Channel MitM</span>
           </div>
-          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 border border-amber-800 text-amber-300">TURBULENT MEDIUM</span>
+          <span id="badge-channel-status" class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 border border-amber-800 text-amber-300">TURBULENT MEDIUM</span>
         </div>
-        <div class="feed-container aspect-[4/3] flex items-center justify-center">
-          <img id="feed-b" src="/stream/node_b" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%23fbbf24\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Channel (UDP 9997)...</text></svg>'" class="w-full h-full object-contain">
-          <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/70 border border-gray-800 text-[10px] font-mono text-gray-300 flex items-center gap-1.5">
-            <span>Cn2: 5e-14</span> &bull; <span>10% S&amp;P</span>
+        <div class="feed-container aspect-[4/3] flex items-center justify-center" onclick="openLightbox('feed-b', 'Terminal 2: Atmospheric Channel (Kolmogorov Turbulence & Shimmer)')">
+          <img id="feed-b" src="/stream/node_b" alt="Node B Feed" class="feed-img" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%23fbbf24\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Channel (UDP 9997)...</text></svg>'">
+          <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-sm border border-gray-800 text-[10px] font-mono text-gray-300 flex items-center gap-1.5">
+            <span>Cn2: 5e-14</span> &bull; <span id="tele-noise-tag">10% S&amp;P</span>
           </div>
+          <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 text-[9px] text-gray-400 font-mono">Click to zoom</div>
         </div>
       </div>
 
@@ -115,59 +120,80 @@
           </div>
           <span id="badge-mode" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300">AUTO-TRACK</span>
         </div>
-        <div class="feed-container aspect-[4/3] flex items-center justify-center">
-          <img id="feed-c" src="/stream/node_c" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%2334d399\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Tracker (UDP 9998)...</text></svg>'" class="w-full h-full object-contain">
-          <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/70 border border-gray-800 text-[10px] font-mono text-gray-300">
+        <div class="feed-container aspect-[4/3] flex items-center justify-center" onclick="openLightbox('feed-c', 'Terminal 3: Ground Optical Sensor (Sub-Pixel Kalman Lock)')">
+          <img id="feed-c" src="/stream/node_c" alt="Node C Feed" class="feed-img" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%2334d399\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Tracker (UDP 9998)...</text></svg>'">
+          <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/75 backdrop-blur-sm border border-gray-800 text-[10px] font-mono text-gray-300">
             ERR: <span id="tele-err-arcsec" class="text-emerald-400 font-bold">0.00</span> arcsec
           </div>
+          <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 text-[9px] text-gray-400 font-mono">Click to zoom</div>
         </div>
       </div>
 
     </div>
 
-    <!-- Row 2: Telemetry Metrics Ribbon -->
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 text-xs">
-      <div class="glass-card p-2.5 flex flex-col">
+    <!-- Row 2: Telemetry Metrics & Real-time Sparkline Ribbon -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-xs">
+      <div class="glass-card p-2.5 flex flex-col justify-between">
         <span class="text-[10px] text-gray-400 uppercase font-semibold">Alignment Status</span>
         <span id="metric-lock" class="text-sm font-bold text-emerald-400">TARGET LOCKED</span>
+        <span class="text-[10px] text-gray-500 font-mono">4-Quadrant IMM PAT</span>
       </div>
-      <div class="glass-card p-2.5 flex flex-col">
+
+      <div class="glass-card p-2.5 flex flex-col justify-between">
         <span class="text-[10px] text-gray-400 uppercase font-semibold">Centroid Error</span>
         <div class="flex items-baseline gap-1">
           <span id="metric-err-px" class="text-sm font-bold text-white font-mono">0.00</span>
           <span class="text-[10px] text-gray-400">px</span>
         </div>
+        <span class="text-[10px] text-emerald-400 font-mono">SLA: &le; 10.0 px OK</span>
       </div>
-      <div class="glass-card p-2.5 flex flex-col">
-        <span class="text-[10px] text-gray-400 uppercase font-semibold">Optical Error</span>
+
+      <div class="glass-card p-2.5 flex flex-col justify-between">
+        <span class="text-[10px] text-gray-400 uppercase font-semibold">Optical Beam Error</span>
         <div class="flex items-baseline gap-1">
           <span id="metric-err-arcsec" class="text-sm font-bold text-sky-400 font-mono">0.00</span>
           <span class="text-[10px] text-gray-400">arcsec</span>
         </div>
+        <span class="text-[10px] text-gray-500 font-mono">22.5 arcsec/px</span>
       </div>
-      <div class="glass-card p-2.5 flex flex-col">
+
+      <div class="glass-card p-2.5 flex flex-col justify-between">
         <span class="text-[10px] text-gray-400 uppercase font-semibold">Gimbal Slew Rate</span>
         <div class="flex items-baseline gap-1">
           <span id="metric-slew" class="text-sm font-bold text-amber-400 font-mono">0.00</span>
-          <span class="text-[10px] text-gray-400">&deg;/s (Max 5.0&deg;/s)</span>
+          <span class="text-[10px] text-gray-400">&deg;/s</span>
         </div>
-        <div class="w-full h-1 bg-gray-800 rounded-full mt-1 overflow-hidden">
+        <div class="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden mt-0.5">
           <div id="bar-slew" class="h-full bg-amber-400 rounded-full transition-all duration-150" style="width: 0%"></div>
         </div>
+        <span class="text-[9px] text-gray-500 font-mono">Max &le; 5.0&deg;/s statutory clamp</span>
       </div>
-      <div class="glass-card p-2.5 flex flex-col">
-        <span class="text-[10px] text-gray-400 uppercase font-semibold">Frame Rate</span>
+
+      <div class="glass-card p-2.5 flex flex-col justify-between">
+        <span class="text-[10px] text-gray-400 uppercase font-semibold">Pipeline Rate</span>
         <div class="flex items-baseline gap-1">
           <span id="metric-fps" class="text-sm font-bold text-emerald-400 font-mono">30.0</span>
           <span class="text-[10px] text-gray-400">FPS</span>
         </div>
+        <span class="text-[10px] text-gray-500 font-mono">HIL Real-Time</span>
       </div>
-      <div class="glass-card p-2.5 flex flex-col">
-        <span class="text-[10px] text-gray-400 uppercase font-semibold">Edge Latency</span>
+
+      <div class="glass-card p-2.5 flex flex-col justify-between">
+        <span class="text-[10px] text-gray-400 uppercase font-semibold">Inference Engine</span>
         <div class="flex items-baseline gap-1">
-          <span class="text-sm font-bold text-sky-400 font-mono">&lt; 1.8</span>
-          <span class="text-[10px] text-gray-400">ms (FP32 SIMD)</span>
+          <span class="text-sm font-bold text-sky-400 font-mono">0.28</span>
+          <span class="text-[10px] text-gray-400">ms (M5 MPS)</span>
         </div>
+        <span class="text-[10px] text-gray-500 font-mono">BeaconNet-Nano &lt;10KB</span>
+      </div>
+
+      <!-- Live Error Sparkline Strip -->
+      <div class="glass-card p-2.5 flex flex-col justify-between col-span-2 md:col-span-4 lg:col-span-1">
+        <div class="flex justify-between items-center">
+          <span class="text-[10px] text-gray-400 uppercase font-semibold">Error Strip (60s)</span>
+          <span class="text-[9px] text-emerald-400 font-mono">&le; 10px</span>
+        </div>
+        <canvas id="sparkline" width="240" height="42" class="sparkline-canvas"></canvas>
       </div>
     </div>
 
@@ -184,27 +210,30 @@
 
           <!-- Section 1: Atmospheric Disturbances (Channel) -->
           <div class="mb-3">
-            <div class="text-[11px] font-bold text-amber-400 uppercase mb-1.5">Atmospheric Optical Disturbances (Node B)</div>
+            <div class="text-[11px] font-bold text-amber-400 uppercase mb-1.5 flex items-center justify-between">
+              <span>Atmospheric Optical Disturbances (Node B)</span>
+              <span class="text-[9px] text-gray-400">Interactive Injection</span>
+            </div>
             <div class="grid grid-cols-2 gap-1.5 text-xs">
-              <button onclick="sendControl('channel', 'toggle_turbulence')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between">
-                <span>Kolmogorov Turbulence</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">TOGGLE</span>
+              <button id="btn-ctrl-turb" onclick="sendControl('channel', 'toggle_turbulence')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition">
+                <span>Turbulence (Kolmogorov)</span>
+                <span id="badge-ctrl-turb" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">ON</span>
               </button>
-              <button onclick="sendControl('channel', 'toggle_fog')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between">
-                <span>Beer-Lambert Fog</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">TOGGLE</span>
+              <button id="btn-ctrl-fog" onclick="sendControl('channel', 'toggle_fog')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition">
+                <span>Fog (Beer-Lambert)</span>
+                <span id="badge-ctrl-fog" class="text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700">OFF</span>
               </button>
-              <button onclick="sendControl('channel', 'step_noise')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between">
-                <span>Salt &amp; Pepper Noise</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">0&rarr;10&rarr;25%</span>
+              <button id="btn-ctrl-noise" onclick="sendControl('channel', 'step_noise')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition">
+                <span>Impulsive S&amp;P Noise</span>
+                <span id="badge-ctrl-noise" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">10% SLA</span>
               </button>
-              <button onclick="sendControl('channel', 'glare')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between">
-                <span>Solar Glare Flare</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">FLASH</span>
+              <button onclick="sendControl('channel', 'glare')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between transition">
+                <span>Solar Glare Flash</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">TRIGGER</span>
               </button>
-              <button onclick="sendControl('channel', 'blackout')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-red-700/60 font-medium text-left col-span-2 flex items-center justify-between">
-                <span>Channel Fading Dropout (Deep Scintillation)</span>
-                <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">1s BLACKOUT</span>
+              <button onclick="sendControl('channel', 'blackout')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-red-700/60 font-medium text-left col-span-2 flex items-center justify-between transition">
+                <span>Scintillation Fading Dropout (Optical Blackout)</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">1s BURST</span>
               </button>
             </div>
           </div>
@@ -213,8 +242,8 @@
           <div class="mb-3">
             <div class="text-[11px] font-bold text-sky-400 uppercase mb-1.5">Satellite Kinematics (Node A)</div>
             <div class="flex gap-2 text-xs">
-              <button onclick="sendControl('satellite', 'evasive')" class="flex-1 p-2 rounded bg-sky-950/60 hover:bg-sky-900/60 border border-sky-800 font-bold text-sky-300 transition flex items-center justify-center gap-1.5">
-                <span>⚡</span> Trigger High-G Evasive Jump
+              <button onclick="sendControl('satellite', 'evasive')" class="flex-1 p-2 rounded bg-sky-950/60 hover:bg-sky-900/60 border border-sky-800 font-bold text-sky-300 transition flex items-center justify-center gap-1.5 shadow-sm">
+                <span>⚡</span> Trigger High-G Evasive Maneuver Jump
               </button>
             </div>
           </div>
@@ -222,21 +251,21 @@
           <!-- Section 3: Ground PTZ Slew & Gimbal Override -->
           <div>
             <div class="text-[11px] font-bold text-emerald-400 uppercase mb-1.5">Gimbal PTZ Slew Control (Node C)</div>
-            <div class="flex flex-wrap items-center justify-between gap-2 p-2 bg-gray-950/60 rounded border border-gray-800">
+            <div class="flex flex-wrap items-center justify-between gap-2 p-2 bg-gray-950/70 rounded-lg border border-gray-800">
               <div class="flex items-center gap-1">
-                <button onclick="sendPTZ('pan_left')" class="px-2.5 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700">&larr; Left</button>
+                <button onclick="sendPTZ('pan_left')" class="px-2.5 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition">&larr; Left</button>
                 <div class="flex flex-col gap-1">
-                  <button onclick="sendPTZ('tilt_up')" class="px-2.5 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700">&uarr; Up</button>
-                  <button onclick="sendPTZ('tilt_down')" class="px-2.5 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700">&darr; Down</button>
+                  <button onclick="sendPTZ('tilt_up')" class="px-2.5 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition">&uarr; Up</button>
+                  <button onclick="sendPTZ('tilt_down')" class="px-2.5 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition">&darr; Down</button>
                 </div>
-                <button onclick="sendPTZ('pan_right')" class="px-2.5 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700">Right &rarr;</button>
+                <button onclick="sendPTZ('pan_right')" class="px-2.5 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700 active:scale-95 transition">Right &rarr;</button>
               </div>
 
               <div class="flex items-center gap-1.5">
-                <button onclick="sendPTZ('toggle_auto')" class="px-2.5 py-1.5 text-xs font-bold rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800">
+                <button onclick="sendPTZ('toggle_auto')" class="px-2.5 py-1.5 text-xs font-bold rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 active:scale-95 transition">
                   Auto / Manual
                 </button>
-                <button onclick="sendPTZ('recenter')" class="px-2.5 py-1.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700">
+                <button onclick="sendPTZ('recenter')" class="px-2.5 py-1.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 active:scale-95 transition">
                   Re-Center
                 </button>
               </div>
@@ -251,11 +280,20 @@
 
       <!-- Live Multi-Terminal Console Stream (7 cols) -->
       <div class="lg:col-span-7 glass-card p-3 flex flex-col">
-        <div class="flex justify-between items-center mb-2 pb-1.5 border-b border-gray-800">
+        <div class="flex flex-wrap justify-between items-center mb-2 pb-1.5 border-b border-gray-800 gap-2">
           <div class="flex items-center gap-2">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
             <span class="text-xs font-bold text-gray-300 uppercase tracking-wide">Live Multi-Terminal Console Stream</span>
           </div>
+
+          <!-- Node Filter Tabs -->
+          <div class="flex items-center gap-1 text-[10px]">
+            <button onclick="setLogFilter('ALL')" id="tab-log-ALL" class="px-2 py-0.5 rounded font-bold bg-sky-600 text-white">ALL</button>
+            <button onclick="setLogFilter('NODE A')" id="tab-log-NODE-A" class="px-2 py-0.5 rounded font-bold bg-gray-800 hover:bg-gray-700 text-sky-400">NODE A</button>
+            <button onclick="setLogFilter('CHANNEL')" id="tab-log-CHANNEL" class="px-2 py-0.5 rounded font-bold bg-gray-800 hover:bg-gray-700 text-amber-400">CHANNEL</button>
+            <button onclick="setLogFilter('TRACKER')" id="tab-log-TRACKER" class="px-2 py-0.5 rounded font-bold bg-gray-800 hover:bg-gray-700 text-emerald-400">TRACKER</button>
+          </div>
+
           <div class="flex items-center gap-2">
             <button onclick="clearLogs()" class="text-[10px] px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-400">Clear</button>
             <label class="text-[10px] text-gray-400 flex items-center gap-1 cursor-pointer">
@@ -277,7 +315,7 @@
   <!-- View 2: 3D Orbital Geometry (Three.js Embed)                          -->
   <!-- ===================================================================== -->
   <main id="view-3d" class="hidden flex-1 flex flex-col glass-card overflow-hidden">
-    <div class="p-3 border-b border-gray-800 flex justify-between items-center bg-[#0d1420]">
+    <div class="p-3 border-b border-gray-800 flex justify-between items-center bg-[#0a101a]">
       <div class="flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
         <span class="text-xs font-bold text-indigo-300 uppercase tracking-wide">3D Interactive Earth-Orbit Laser Link Visualizer (Three.js WebGL)</span>
@@ -292,11 +330,34 @@
   </main>
 
   <!-- ===================================================================== -->
-  <!-- Client JavaScript Logic                                               -->
+  <!-- Viewport Lightbox Modal (Zoom on Click)                                -->
+  <!-- ===================================================================== -->
+  <div id="lightbox-modal" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex flex-col items-center justify-center p-4" onclick="closeLightbox()">
+    <div class="glass-card max-w-4xl w-full p-4 flex flex-col gap-3 relative" onclick="event.stopPropagation()">
+      <div class="flex justify-between items-center pb-2 border-b border-gray-800">
+        <h3 id="lightbox-title" class="text-sm font-bold text-sky-400 font-mono">FEED INSPECTION</h3>
+        <button onclick="closeLightbox()" class="text-xs px-2.5 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold">&times; Close</button>
+      </div>
+      <div class="w-full aspect-[4/3] bg-black rounded overflow-hidden flex items-center justify-center">
+        <img id="lightbox-img" src="" alt="Enlarged Feed" class="feed-img">
+      </div>
+      <div class="text-[11px] text-gray-400 font-mono flex justify-between">
+        <span>Press ESC or click outside to dismiss</span>
+        <span>Phoenix-X Real-Time Optical Diagnostic Stream</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- Client JavaScript Logic & Sparkline Renderer                          -->
   <!-- ===================================================================== -->
   <script>
     let currentView = 'matrix';
     let lastLogCount = 0;
+    let allLogs = [];
+    let currentLogFilter = 'ALL';
+    const errorHistory = [];
+    const maxHistoryPoints = 60;
 
     function switchView(viewName) {
       currentView = viewName;
@@ -308,13 +369,13 @@
       if (viewName === 'matrix') {
         vMatrix.classList.remove('hidden');
         v3d.classList.add('hidden');
-        btnMatrix.className = "px-2.5 py-1 rounded font-semibold bg-sky-600 text-white transition";
-        btn3d.className = "px-2.5 py-1 rounded font-semibold text-gray-400 hover:text-white transition";
+        btnMatrix.className = "px-3 py-1 rounded-md font-semibold bg-sky-600 text-white transition";
+        btn3d.className = "px-3 py-1 rounded-md font-semibold text-gray-400 hover:text-white transition";
       } else {
         vMatrix.classList.add('hidden');
         v3d.classList.remove('hidden');
-        btnMatrix.className = "px-2.5 py-1 rounded font-semibold text-gray-400 hover:text-white transition";
-        btn3d.className = "px-2.5 py-1 rounded font-semibold bg-indigo-600 text-white transition";
+        btnMatrix.className = "px-3 py-1 rounded-md font-semibold text-gray-400 hover:text-white transition";
+        btn3d.className = "px-3 py-1 rounded-md font-semibold bg-indigo-600 text-white transition";
       }
     }
 
@@ -341,6 +402,68 @@
       }
     }
 
+    // Lightbox / Zoom
+    function openLightbox(feedId, title) {
+      const src = document.getElementById(feedId).src;
+      document.getElementById('lightbox-img').src = src;
+      document.getElementById('lightbox-title').textContent = title;
+      document.getElementById('lightbox-modal').classList.remove('hidden');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox-modal').classList.add('hidden');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLightbox();
+    });
+
+    // Draw Real-Time Error Sparkline
+    function drawSparkline() {
+      const canvas = document.getElementById('sparkline');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Background grid
+      ctx.strokeStyle = "#172033";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
+      ctx.stroke();
+
+      // Statutory 10 px SLA threshold line (dashed green)
+      const slaY = h * 0.25; // 10 px mapped near top
+      ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(0, slaY); ctx.lineTo(w, slaY);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (errorHistory.length < 2) return;
+
+      // Draw Error Curve
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      const step = w / (maxHistoryPoints - 1);
+      const startX = w - (errorHistory.length - 1) * step;
+
+      for (let i = 0; i < errorHistory.length; i++) {
+        const x = startX + i * step;
+        // Map 0 -> 15 px to bottom -> top
+        const norm = Math.min(1.0, errorHistory[i] / 15.0);
+        const y = h - (norm * (h - 8)) - 4;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
     // Poll Real-Time Telemetry
     async function updateTelemetry() {
       try {
@@ -348,13 +471,18 @@
         if (!res.ok) return;
         const data = await res.json();
 
-        // Update indicators
+        // Update readouts
         document.getElementById('metric-err-px').textContent = data.error_px.toFixed(2);
         document.getElementById('metric-err-arcsec').textContent = data.error_arcsec.toFixed(2);
         document.getElementById('tele-err-arcsec').textContent = data.error_arcsec.toFixed(2);
         document.getElementById('metric-slew').textContent = data.slew_rate_deg_s.toFixed(2);
         document.getElementById('metric-fps').textContent = data.fps.toFixed(1);
         document.getElementById('tele-cam-pos').textContent = `${data.cam_x.toFixed(1)}, ${data.cam_y.toFixed(1)}`;
+
+        // Append to sparkline history
+        errorHistory.push(data.error_px);
+        if (errorHistory.length > maxHistoryPoints) errorHistory.shift();
+        drawSparkline();
 
         // Slew progress bar (clamped to 5.0 deg/s)
         const pct = Math.min(100, (data.slew_rate_deg_s / 5.0) * 100);
@@ -392,8 +520,69 @@
           badgeMode.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 border border-amber-800 text-amber-300";
         }
 
+        // Dynamic Button Illumination reflecting backend state
+        const badgeTurb = document.getElementById('badge-ctrl-turb');
+        if (data.turbulence_active) {
+          badgeTurb.textContent = "ON";
+          badgeTurb.className = "text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800 font-bold";
+        } else {
+          badgeTurb.textContent = "OFF";
+          badgeTurb.className = "text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700";
+        }
+
+        const badgeFog = document.getElementById('badge-ctrl-fog');
+        if (data.fog_active) {
+          badgeFog.textContent = "ON";
+          badgeFog.className = "text-[10px] px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold";
+        } else {
+          badgeFog.textContent = "OFF";
+          badgeFog.className = "text-[10px] px-1.5 py-0.5 rounded bg-gray-800 text-gray-400 border border-gray-700";
+        }
+
+        const badgeNoise = document.getElementById('badge-ctrl-noise');
+        const noisePct = Math.round((data.noise_ratio || 0.10) * 100);
+        badgeNoise.textContent = `${noisePct}% SLA`;
+        document.getElementById('tele-noise-tag').textContent = `${noisePct}% S&P`;
+
       } catch (e) {
-        // Quietly catch during startup
+        // Quiet during poll
+      }
+    }
+
+    // Terminal Logging with Filters
+    function setLogFilter(filterName) {
+      currentLogFilter = filterName;
+      ['ALL', 'NODE-A', 'CHANNEL', 'TRACKER'].forEach(tab => {
+        const el = document.getElementById(`tab-log-${tab}`);
+        if (!el) return;
+        const key = tab.replace('-', ' ');
+        if (key === filterName) {
+          el.className = "px-2 py-0.5 rounded font-bold bg-sky-600 text-white";
+        } else {
+          el.className = "px-2 py-0.5 rounded font-bold bg-gray-800 hover:bg-gray-700 text-gray-400";
+        }
+      });
+      renderLogs();
+    }
+
+    function renderLogs() {
+      const container = document.getElementById('terminal-feed');
+      const filtered = allLogs.filter(l => {
+        if (currentLogFilter === 'ALL') return true;
+        return l.node === currentLogFilter;
+      });
+
+      container.innerHTML = filtered.map(l => {
+        let col = "text-sky-400";
+        if (l.node === "CHANNEL") col = "text-amber-400";
+        if (l.node === "TRACKER") col = "text-emerald-400";
+        if (l.node === "MASTER") col = "text-purple-400";
+
+        return `<div class="mb-1"><span class="text-gray-500 font-mono">[${l.timestamp}]</span> <span class="${col} font-bold font-mono">[${l.node}]</span> <span class="text-gray-300">${escapeHtml(l.message)}</span></div>`;
+      }).join('');
+
+      if (document.getElementById('autoscroll-chk').checked) {
+        container.scrollTop = container.scrollHeight;
       }
     }
 
@@ -406,19 +595,8 @@
         
         if (logs.length !== lastLogCount) {
           lastLogCount = logs.length;
-          const container = document.getElementById('terminal-feed');
-          container.innerHTML = logs.map(l => {
-            let col = "text-sky-400";
-            if (l.node === "CHANNEL") col = "text-amber-400";
-            if (l.node === "TRACKER") col = "text-emerald-400";
-            if (l.node === "MASTER") col = "text-purple-400";
-
-            return `<div class="mb-1"><span class="text-gray-500 font-mono">[${l.timestamp}]</span> <span class="${col} font-bold font-mono">[${l.node}]</span> <span class="text-gray-300">${escapeHtml(l.message)}</span></div>`;
-          }).join('');
-
-          if (document.getElementById('autoscroll-chk').checked) {
-            container.scrollTop = container.scrollHeight;
-          }
+          allLogs = logs;
+          renderLogs();
         }
       } catch (e) {
         // Quiet during poll
@@ -428,6 +606,7 @@
     function clearLogs() {
       document.getElementById('terminal-feed').innerHTML = '';
       lastLogCount = 0;
+      allLogs = [];
     }
 
     function escapeHtml(text) {
