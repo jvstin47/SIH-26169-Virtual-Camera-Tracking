@@ -62,3 +62,46 @@ class BeaconNetNano(nn.Module):
         heatmap = self.sigmoid(self.head(out))
         return heatmap
 '''
+
+# Dynamically provide PyTorch class if torch is installed
+try:
+    import torch
+    import torch.nn as nn
+    _scope = {}
+    exec(get_pytorch_model_def(), _scope)
+    BeaconNetNano = _scope['BeaconNetNano']
+except ImportError:
+    class BeaconNetNano:
+        def __init__(self, *args, **kwargs):
+            raise ImportError("PyTorch is required for BeaconNetNano. Install torch or use BeaconNetNanoNumPy.")
+
+class BeaconNetNanoNumPy:
+    """
+    Lightweight NumPy/SIMD fallback engine for BeaconNet-Nano.
+    Executes spatial gradient and spot detection filters on any CPU without PyTorch.
+    """
+    def __init__(self):
+        # 3x3 high-pass/Gaussian center-surround kernel
+        self.kernel = np.array([
+            [-1, -1, -1],
+            [-1,  8, -1],
+            [-1, -1, -1]
+        ], dtype=np.float32)
+
+    def forward(self, fpa_image: np.ndarray) -> np.ndarray:
+        """
+        Runs fast spatial convolution and sigmoid-like activation.
+        Input: 2D numpy array [H, W] normalized in [0, 1]
+        Output: 2D saliency heatmap [H, W] in [0, 1]
+        """
+        import cv2
+        grad = cv2.filter2D(fpa_image.astype(np.float32), -1, self.kernel)
+        grad = np.clip(grad, 0.0, None)
+        # Saliency normalization
+        max_v = np.max(grad)
+        if max_v > 1e-6:
+            saliency = grad / max_v
+        else:
+            saliency = grad
+        return 1.0 / (1.0 + np.exp(-10.0 * (saliency - 0.5)))
+

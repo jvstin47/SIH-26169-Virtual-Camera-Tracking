@@ -43,16 +43,31 @@ class BeaconNetNano(nn.Module):
 
 
 def main():
+    print("[*] Detecting hardware acceleration...")
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+        print("[+] M5 GPU Acceleration Active via Metal Performance Shaders (MPS)!")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+        print(f"[+] CUDA GPU Acceleration Active: {torch.cuda.get_device_name(0)}")
+    else:
+        device = torch.device("cpu")
+        print("[*] Running on CPU (SIMD acceleration).")
+
     print("[*] Instantiating BeaconNetNano...")
-    model = BeaconNetNano()
+    model = BeaconNetNano().to(device)
     model.eval()
+    
+    # Export ONNX on CPU for universal deployment
+    model_cpu = model.to("cpu")
     dummy = torch.randn(1, 1, 240, 320)
     out_onnx = "models/beacon_saliency_net.onnx"
     torch.onnx.export(
-        model, dummy, out_onnx,
+        model_cpu, dummy, out_onnx,
         input_names=['input_fpa_tensor'],
         output_names=['saliency_heatmap'],
-        opset_version=14
+        opset_version=14,
+        do_constant_folding=True
     )
     print(f"[+] Saved ONNX model to: {out_onnx}")
 

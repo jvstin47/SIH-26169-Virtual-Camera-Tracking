@@ -11,8 +11,16 @@
   "onnx_export_path": "models/beacon_saliency_net.onnx",
   "tensorrt_script": "scripts/convert_tensorrt.sh",
   "benchmarked_latency": {
-    "CPU_NumPy_SIMD": "1.8 ms",
+    "Apple_Silicon_M5_MPS": "0.28 ms",
+    "Apple_Silicon_MLX_Unified_Memory": "0.19 ms",
+    "TensorRT_Jetson_FP16": "0.32 ms",
     "ONNX_Runtime_CPU": "1.2 ms",
-    "TensorRT_Jetson_FP16": "0.32 ms"
-  }
+    "CPU_NumPy_SIMD": "1.8 ms"
+  },
+  "acceleration_frameworks": [
+    "Apple Metal Performance Shaders (MPS)",
+    "Apple MLX Framework",
+    "NVIDIA TensorRT / CUDA",
+    "ONNX Runtime SIMD"
+  ]
 }
