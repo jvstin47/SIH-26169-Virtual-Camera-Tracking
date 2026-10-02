@@ -117,6 +117,11 @@ def main():
     parser = argparse.ArgumentParser(description="Node B: Autonomous Ground Optical Tracking Station")
     parser.add_argument("--port", type=int, default=9997,
                         help="UDP port to listen on (default: 9997 for 3-Terminal Mode via Node C Channel; use 9999 for Direct 2-Terminal Mode)")
+    parser.add_argument("--headless", action="store_true", help="Run without native GUI windows")
+    parser.add_argument("--stream-port", type=int, default=0, help="UDP port to mirror tracker HUD JPEG for Web Streaming")
+    parser.add_argument("--telemetry-port", type=int, default=0, help="UDP port to broadcast telemetry JSON")
+    parser.add_argument("--cmd-port", type=int, default=9995, help="UDP port to receive PTZ commands")
+    parser.add_argument("--no-http", action="store_true", help="Disable internal HTTP server")
     args = parser.parse_args()
 
     listen_port = args.port
@@ -126,7 +131,8 @@ def main():
     else:
         print("    [Mode: 2-TERMINAL DIRECT LINK from Node A Satellite]")
     print("[*] Transmitting closed-loop PTZ feedback to Node A on 127.0.0.1:9998...")
-    print("[+] Live Mission Control Dashboard active at: http://localhost:8080/live.html")
+    if not args.no_http:
+        print("[+] Live Mission Control Dashboard active at: http://localhost:8080/live.html")
     print("\nOperator PTZ Controls:")
     print("  [W / Up]    Tilt Up")
     print("  [S / Down]  Tilt Down")
@@ -136,9 +142,54 @@ def main():
     print("  [R]         Re-Center Camera to Global Origin")
     print("  [Q]         Quit Node B\n")
 
-    # Start HTTP Telemetry Server
-    http_thread = threading.Thread(target=start_http_server, daemon=True)
-    http_thread.start()
+    # Command listener thread for remote web PTZ commands
+    def ptz_cmd_listener():
+        sock_cmd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock_cmd.bind(("127.0.0.1", args.cmd_port))
+        sock_cmd.settimeout(1.0)
+        step_px = 35.0
+        while True:
+            try:
+                data, _ = sock_cmd.recvfrom(1024)
+                if data == b"STOP":
+                    break
+                msg = json.loads(data.decode('utf-8'))
+                cmd = msg.get("cmd") or msg.get("action")
+                if cmd == "pan_left":
+                    GIMBAL_STATE["auto_track"] = False
+                    GIMBAL_STATE["cam_x"] -= step_px
+                elif cmd == "pan_right":
+                    GIMBAL_STATE["auto_track"] = False
+                    GIMBAL_STATE["cam_x"] += step_px
+                elif cmd == "tilt_up":
+                    GIMBAL_STATE["auto_track"] = False
+                    GIMBAL_STATE["cam_y"] -= step_px
+                elif cmd == "tilt_down":
+                    GIMBAL_STATE["auto_track"] = False
+                    GIMBAL_STATE["cam_y"] += step_px
+                elif cmd in ("toggle_auto", "toggle_track"):
+                    GIMBAL_STATE["auto_track"] = not GIMBAL_STATE["auto_track"]
+                elif cmd == "recenter":
+                    GIMBAL_STATE["cam_x"] = UNIVERSE_WIDTH_PX / 2.0
+                    GIMBAL_STATE["cam_y"] = UNIVERSE_HEIGHT_PX / 2.0
+                    GIMBAL_STATE["auto_track"] = True
+            except Exception:
+                continue
+        sock_cmd.close()
+
+    t_cmd = threading.Thread(target=ptz_cmd_listener, daemon=True)
+    t_cmd.start()
+
+    # Start HTTP Telemetry Server if requested
+    if not args.no_http:
+        http_thread = threading.Thread(target=start_http_server, daemon=True)
+        http_thread.start()
+
+    sock_stream = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) if args.stream_port > 0 else None
+    stream_addr = ("127.0.0.1", args.stream_port) if args.stream_port > 0 else None
+
+    sock_telem = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) if args.telemetry_port > 0 else None
+    telem_addr = ("127.0.0.1", args.telemetry_port) if args.telemetry_port > 0 else None
 
     # UDP Sockets
     sock_rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -296,53 +347,75 @@ def main():
         cv2.putText(bgr, f"CAM POS: ({GIMBAL_STATE['cam_x']:.1f}, {GIMBAL_STATE['cam_y']:.1f}) | ERR: {error_px:4.2f} px | {measured_fps:4.1f} FPS",
                     (20, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.40, (220, 220, 220), 1)
 
-        cv2.imshow("Node B: Ground Optical Tracker (Terminal 2)", bgr)
-        key = cv2.waitKey(1) & 0xFF
-        
-        # Interactive PTZ Controls
-        step_manual = 400.0 # px/s
-        if key == ord('q') or key == 27:
-            break
-        elif key in (ord('w'), 0):  # Tilt Up (W or Up Arrow)
-            GIMBAL_STATE["auto_track"] = False
-            GIMBAL_STATE["manual_vy"] = -step_manual
-            GIMBAL_STATE["manual_vx"] = 0.0
-            print("[*] Operator PTZ Command: TILT UP")
-        elif key in (ord('s'), 1):  # Tilt Down (S or Down Arrow)
-            GIMBAL_STATE["auto_track"] = False
-            GIMBAL_STATE["manual_vy"] = step_manual
-            GIMBAL_STATE["manual_vx"] = 0.0
-            print("[*] Operator PTZ Command: TILT DOWN")
-        elif key in (ord('a'), 2):  # Pan Left (A or Left Arrow)
-            GIMBAL_STATE["auto_track"] = False
-            GIMBAL_STATE["manual_vx"] = -step_manual
-            GIMBAL_STATE["manual_vy"] = 0.0
-            print("[*] Operator PTZ Command: PAN LEFT")
-        elif key in (ord('d'), 3):  # Pan Right (D or Right Arrow)
-            GIMBAL_STATE["auto_track"] = False
-            GIMBAL_STATE["manual_vx"] = step_manual
-            GIMBAL_STATE["manual_vy"] = 0.0
-            print("[*] Operator PTZ Command: PAN RIGHT")
-        elif key in (ord('m'), ord('M'), 32):  # Space or M toggles Auto/Manual
-            GIMBAL_STATE["auto_track"] = not GIMBAL_STATE["auto_track"]
-            GIMBAL_STATE["manual_vx"] = 0.0
-            GIMBAL_STATE["manual_vy"] = 0.0
-            print(f"[*] PTZ Mode: {'AUTONOMOUS' if GIMBAL_STATE['auto_track'] else 'MANUAL OVERRIDE'}")
-        elif key in (ord('r'), ord('R')):
-            GIMBAL_STATE["cam_x"] = UNIVERSE_WIDTH_PX / 2.0
-            GIMBAL_STATE["cam_y"] = UNIVERSE_HEIGHT_PX / 2.0
-            GIMBAL_STATE["auto_track"] = True
-            GIMBAL_STATE["manual_vx"] = 0.0
-            GIMBAL_STATE["manual_vy"] = 0.0
-            print("[*] PTZ Camera Re-Centered.")
-        else:
-            # Damp manual velocity if key not pressed
-            GIMBAL_STATE["manual_vx"] *= 0.5
-            GIMBAL_STATE["manual_vy"] *= 0.5
+        # Broadcast telemetry JSON to orchestrator if requested
+        if sock_telem is not None:
+            try:
+                telem_bytes = json.dumps(LATEST_TELEMETRY).encode('utf-8')
+                sock_telem.sendto(telem_bytes, telem_addr)
+            except Exception:
+                pass
+
+        # Stream BGR tracking frame to web server if requested
+        if sock_stream is not None:
+            try:
+                _, jpg_stream = cv2.imencode('.jpg', bgr, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                sock_stream.sendto(jpg_stream.tobytes(), stream_addr)
+            except Exception:
+                pass
+
+        if not args.headless:
+            cv2.imshow("Node B: Ground Optical Tracker (Terminal 2)", bgr)
+            key = cv2.waitKey(1) & 0xFF
+            
+            # Interactive PTZ Controls
+            step_manual = 400.0 # px/s
+            if key == ord('q') or key == 27:
+                break
+            elif key in (ord('w'), 0):  # Tilt Up (W or Up Arrow)
+                GIMBAL_STATE["auto_track"] = False
+                GIMBAL_STATE["manual_vy"] = -step_manual
+                GIMBAL_STATE["manual_vx"] = 0.0
+                print("[*] Operator PTZ Command: TILT UP")
+            elif key in (ord('s'), 1):  # Tilt Down (S or Down Arrow)
+                GIMBAL_STATE["auto_track"] = False
+                GIMBAL_STATE["manual_vy"] = step_manual
+                GIMBAL_STATE["manual_vx"] = 0.0
+                print("[*] Operator PTZ Command: TILT DOWN")
+            elif key in (ord('a'), 2):  # Pan Left (A or Left Arrow)
+                GIMBAL_STATE["auto_track"] = False
+                GIMBAL_STATE["manual_vx"] = -step_manual
+                GIMBAL_STATE["manual_vy"] = 0.0
+                print("[*] Operator PTZ Command: PAN LEFT")
+            elif key in (ord('d'), 3):  # Pan Right (D or Right Arrow)
+                GIMBAL_STATE["auto_track"] = False
+                GIMBAL_STATE["manual_vx"] = step_manual
+                GIMBAL_STATE["manual_vy"] = 0.0
+                print("[*] Operator PTZ Command: PAN RIGHT")
+            elif key in (ord('m'), ord('M'), 32):  # Space or M toggles Auto/Manual
+                GIMBAL_STATE["auto_track"] = not GIMBAL_STATE["auto_track"]
+                GIMBAL_STATE["manual_vx"] = 0.0
+                GIMBAL_STATE["manual_vy"] = 0.0
+                print(f"[*] PTZ Mode: {'AUTONOMOUS' if GIMBAL_STATE['auto_track'] else 'MANUAL OVERRIDE'}")
+            elif key in (ord('r'), ord('R')):
+                GIMBAL_STATE["cam_x"] = UNIVERSE_WIDTH_PX / 2.0
+                GIMBAL_STATE["cam_y"] = UNIVERSE_HEIGHT_PX / 2.0
+                GIMBAL_STATE["auto_track"] = True
+                GIMBAL_STATE["manual_vx"] = 0.0
+                GIMBAL_STATE["manual_vy"] = 0.0
+                print("[*] PTZ Camera Re-Centered.")
+            else:
+                # Damp manual velocity if key not pressed
+                GIMBAL_STATE["manual_vx"] *= 0.5
+                GIMBAL_STATE["manual_vy"] *= 0.5
 
     sock_rx.close()
     sock_tx.close()
-    cv2.destroyAllWindows()
+    if sock_stream is not None:
+        sock_stream.close()
+    if sock_telem is not None:
+        sock_telem.close()
+    if not args.headless:
+        cv2.destroyAllWindows()
     print("[+] Node B stopped.")
 
 if __name__ == "__main__":

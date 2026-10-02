@@ -27,6 +27,7 @@ CAM_STATE = {
     "cam_x": UNIVERSE_WIDTH_PX / 2.0,
     "cam_y": UNIVERSE_HEIGHT_PX / 2.0
 }
+REMOTE_COMMANDS = []
 
 def ptz_listener():
     """Listens for PTZ camera updates sent from Node B on port 9998."""
@@ -39,8 +40,12 @@ def ptz_listener():
             if data == b"STOP":
                 break
             msg = json.loads(data.decode('utf-8'))
-            CAM_STATE["cam_x"] = float(msg.get("cam_x", CAM_STATE["cam_x"]))
-            CAM_STATE["cam_y"] = float(msg.get("cam_y", CAM_STATE["cam_y"]))
+            if "cam_x" in msg:
+                CAM_STATE["cam_x"] = float(msg.get("cam_x", CAM_STATE["cam_x"]))
+            if "cam_y" in msg:
+                CAM_STATE["cam_y"] = float(msg.get("cam_y", CAM_STATE["cam_y"]))
+            if "cmd" in msg:
+                REMOTE_COMMANDS.append(msg["cmd"])
         except Exception:
             continue
     sock_rx.close()
@@ -62,6 +67,8 @@ def main():
     parser = argparse.ArgumentParser(description="Node A: Remote Maneuvering Satellite Transmitter")
     parser.add_argument("--port", type=int, default=9999,
                         help="UDP port to stream optical frames to (default: 9999 for Node C Atmospheric Channel, or directly to Node B)")
+    parser.add_argument("--headless", action="store_true", help="Run without native GUI windows")
+    parser.add_argument("--stream-port", type=int, default=0, help="UDP port to mirror HUD JPEG for Web Streaming")
     args = parser.parse_args()
 
     # Start PTZ receiver thread
@@ -72,6 +79,9 @@ def main():
     target_addr = ("127.0.0.1", args.port)
     udp_sender = UDPSender(sock_tx, target_addr)
     print(f"[*] Streaming video frames to UDP 127.0.0.1:{args.port}...")
+
+    sock_stream = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) if args.stream_port > 0 else None
+    stream_addr = ("127.0.0.1", args.stream_port) if args.stream_port > 0 else None
 
     optics = OpticalEngine(spot_size_px=10, spot_peak_intensity=250)
     
@@ -280,29 +290,58 @@ def main():
         cv2.putText(hud, "  [Space] Evasive Maneuver Jump", (panel_x, 522), cv2.FONT_HERSHEY_SIMPLEX, 0.32, (150, 160, 175), 1)
         cv2.putText(hud, "  [Q/ESC] Quit Node A", (panel_x, 542), cv2.FONT_HERSHEY_SIMPLEX, 0.32, (150, 160, 175), 1)
 
-        cv2.imshow("Node A: Global Universe (2000x2000) & Satellite Transmitter (Terminal 1)", hud)
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord('q') or key == 27:
-            break
-        elif key == ord('1'):
-            optics.enable_salt_and_pepper = not optics.enable_salt_and_pepper
-            print(f"[*] Node A: 10% S&P Noise -> {optics.enable_salt_and_pepper}")
-        elif key == ord('3'):
-            optics.enable_fog = not optics.enable_fog
-            print(f"[*] Node A: Fog Attenuation -> {optics.enable_fog}")
-        elif key == ord('4'):
-            optics.enable_jitter = not optics.enable_jitter
-            print(f"[*] Node A: Platform Jitter -> {optics.enable_jitter}")
-        elif key == 32:  # Spacebar
-            vx = np.random.choice([-1, 1]) * 75.0
-            vy = np.random.choice([-1, 1]) * 75.0
-            print(f"[!] Node A: High-G Evasive Jump -> Vel: ({vx:.1f}, {vy:.1f})")
+        # Process remote web commands
+        while REMOTE_COMMANDS:
+            rcmd = REMOTE_COMMANDS.pop(0)
+            if rcmd == "evasive":
+                vx = np.random.choice([-1, 1]) * 80.0
+                vy = np.random.choice([-1, 1]) * 80.0
+                print(f"[!] Node A: Remote Evasive Jump -> Vel: ({vx:.1f}, {vy:.1f})")
+            elif rcmd == "toggle_noise":
+                optics.enable_salt_and_pepper = not optics.enable_salt_and_pepper
+                print(f"[*] Node A: Remote 10% S&P Noise -> {optics.enable_salt_and_pepper}")
+            elif rcmd == "toggle_fog":
+                optics.enable_fog = not optics.enable_fog
+                print(f"[*] Node A: Remote Fog Attenuation -> {optics.enable_fog}")
+            elif rcmd == "toggle_jitter":
+                optics.enable_jitter = not optics.enable_jitter
+                print(f"[*] Node A: Remote Platform Jitter -> {optics.enable_jitter}")
+
+        # Stream HUD JPEG to web server if requested
+        if sock_stream is not None:
+            try:
+                _, jpg_stream = cv2.imencode('.jpg', hud, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                sock_stream.sendto(jpg_stream.tobytes(), stream_addr)
+            except Exception:
+                pass
+
+        if not args.headless:
+            cv2.imshow("Node A: Global Universe (2000x2000) & Satellite Transmitter (Terminal 1)", hud)
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q') or key == 27:
+                break
+            elif key == ord('1'):
+                optics.enable_salt_and_pepper = not optics.enable_salt_and_pepper
+                print(f"[*] Node A: 10% S&P Noise -> {optics.enable_salt_and_pepper}")
+            elif key == ord('3'):
+                optics.enable_fog = not optics.enable_fog
+                print(f"[*] Node A: Fog Attenuation -> {optics.enable_fog}")
+            elif key == ord('4'):
+                optics.enable_jitter = not optics.enable_jitter
+                print(f"[*] Node A: Platform Jitter -> {optics.enable_jitter}")
+            elif key == 32:  # Spacebar
+                vx = np.random.choice([-1, 1]) * 75.0
+                vy = np.random.choice([-1, 1]) * 75.0
+                print(f"[!] Node A: High-G Evasive Jump -> Vel: ({vx:.1f}, {vy:.1f})")
 
         time.sleep(max(0.001, dt - (time.time() - (t_start + t_now))))
 
     sock_tx.sendto(b"STOP", target_addr)
     sock_tx.close()
-    cv2.destroyAllWindows()
+    if sock_stream is not None:
+        sock_stream.close()
+    if not args.headless:
+        cv2.destroyAllWindows()
     print("[+] Node A stopped.")
 
 if __name__ == "__main__":

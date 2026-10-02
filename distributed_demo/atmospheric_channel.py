@@ -20,6 +20,7 @@ import time
 import math
 import socket
 import json
+import threading
 import numpy as np
 import cv2
 
@@ -132,6 +133,34 @@ def main():
     print("  [5] Trigger Sudden Optical Channel Fading Dropout (1-second blackout)")
     print("  [Q] or [ESC] Quit Node C\n")
 
+    import argparse
+    parser = argparse.ArgumentParser(description="Node C: Active Atmospheric Channel & Turbulence Emulator")
+    parser.add_argument("--headless", action="store_true", help="Run without native GUI windows")
+    parser.add_argument("--stream-port", type=int, default=0, help="UDP port to mirror channel HUD JPEG for Web Streaming")
+    parser.add_argument("--cmd-port", type=int, default=9996, help="UDP port to receive remote web commands")
+    args = parser.parse_args()
+
+    channel = AtmosphericChannelEmulator()
+    cmd_queue = []
+
+    def cmd_listener():
+        sock_cmd = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock_cmd.bind(("127.0.0.1", args.cmd_port))
+        sock_cmd.settimeout(1.0)
+        while True:
+            try:
+                data, _ = sock_cmd.recvfrom(1024)
+                if data == b"STOP":
+                    break
+                msg = json.loads(data.decode('utf-8'))
+                cmd_queue.append(msg)
+            except Exception:
+                continue
+        sock_cmd.close()
+
+    t_cmd = threading.Thread(target=cmd_listener, daemon=True)
+    t_cmd.start()
+
     # UDP Ingest from Node A
     sock_rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock_rx.bind(("127.0.0.1", 9999))
@@ -141,10 +170,12 @@ def main():
     sock_tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     node_b_addr = ("127.0.0.1", 9997)
 
+    sock_stream = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) if args.stream_port > 0 else None
+    stream_addr = ("127.0.0.1", args.stream_port) if args.stream_port > 0 else None
+
     receiver = UDPReceiver(sock_rx)
     sender = UDPSender(sock_tx, node_b_addr)
 
-    channel = AtmosphericChannelEmulator()
     t_start = time.time()
     packet_count = 0
 
@@ -222,35 +253,69 @@ def main():
         cv2.putText(hud, "[1] Noise  [2] Turbulence  [3] Fog  [4] Solar Glare  [5] Blackout  [Q] Quit",
                     (15, CAMERA_HEIGHT_PX - 9), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (120, 180, 255), 1, cv2.LINE_AA)
 
-        cv2.imshow("Node C: Physical Atmospheric Channel & Turbulence (Terminal 2)", hud)
-        key = cv2.waitKey(1) & 0xFF
-        
-        if key == ord('q') or key == 27:
-            break
-        elif key == ord('1'):
-            if channel.sp_noise_ratio == 0.0:
-                channel.sp_noise_ratio = 0.10
-            elif channel.sp_noise_ratio == 0.10:
-                channel.sp_noise_ratio = 0.25
-            else:
-                channel.sp_noise_ratio = 0.0
-            print(f"[*] Node C: Impulsive Noise set to {int(channel.sp_noise_ratio * 100)}%")
-        elif key == ord('2'):
-            channel.enable_turbulence = not channel.enable_turbulence
-            print(f"[*] Node C: Kolmogorov Wavefront Turbulence -> {'ENABLED' if channel.enable_turbulence else 'DISABLED'}")
-        elif key == ord('3'):
-            channel.enable_fog = not channel.enable_fog
-            print(f"[*] Node C: Cloud Obscuration & Fog -> {'ENABLED' if channel.enable_fog else 'DISABLED'}")
-        elif key == ord('4'):
-            channel.enable_glare = not channel.enable_glare
-            print(f"[*] Node C: Solar Glare Flare -> {'ENABLED' if channel.enable_glare else 'DISABLED'}")
-        elif key == ord('5'):
-            channel.dropout_frames = 30  # 1 second blackout at 30 fps
-            print("[!] Node C: Triggered Optical Channel Fading Dropout (1s)")
+        # Process remote web commands
+        while cmd_queue:
+            cmsg = cmd_queue.pop(0)
+            caction = cmsg.get("action") or cmsg.get("cmd")
+            if caction == "toggle_turbulence":
+                channel.enable_turbulence = not channel.enable_turbulence
+                print(f"[*] Node B Channel: Remote Kolmogorov Turbulence -> {channel.enable_turbulence}")
+            elif caction == "toggle_fog":
+                channel.enable_fog = not channel.enable_fog
+                print(f"[*] Node B Channel: Remote Fog Attenuation -> {channel.enable_fog}")
+            elif caction == "step_noise":
+                if channel.sp_noise_ratio == 0.0: channel.sp_noise_ratio = 0.10
+                elif channel.sp_noise_ratio == 0.10: channel.sp_noise_ratio = 0.25
+                else: channel.sp_noise_ratio = 0.0
+                print(f"[*] Node B Channel: Remote Impulsive Noise -> {int(channel.sp_noise_ratio*100)}%")
+            elif caction == "glare":
+                channel.enable_glare = not channel.enable_glare
+                print(f"[*] Node B Channel: Remote Solar Flare -> {channel.enable_glare}")
+            elif caction == "blackout":
+                channel.dropout_frames = 30
+                print("[!] Node B Channel: Remote Trigger Optical Blackout (1s)")
+
+        # Stream HUD JPEG to web server if requested
+        if sock_stream is not None:
+            try:
+                _, jpg_stream = cv2.imencode('.jpg', hud, [cv2.IMWRITE_JPEG_QUALITY, 60])
+                sock_stream.sendto(jpg_stream.tobytes(), stream_addr)
+            except Exception:
+                pass
+
+        if not args.headless:
+            cv2.imshow("Node C: Physical Atmospheric Channel & Turbulence (Terminal 2)", hud)
+            key = cv2.waitKey(1) & 0xFF
+            
+            if key == ord('q') or key == 27:
+                break
+            elif key == ord('1'):
+                if channel.sp_noise_ratio == 0.0:
+                    channel.sp_noise_ratio = 0.10
+                elif channel.sp_noise_ratio == 0.10:
+                    channel.sp_noise_ratio = 0.25
+                else:
+                    channel.sp_noise_ratio = 0.0
+                print(f"[*] Node C: Impulsive Noise set to {int(channel.sp_noise_ratio * 100)}%")
+            elif key == ord('2'):
+                channel.enable_turbulence = not channel.enable_turbulence
+                print(f"[*] Node C: Kolmogorov Wavefront Turbulence -> {'ENABLED' if channel.enable_turbulence else 'DISABLED'}")
+            elif key == ord('3'):
+                channel.enable_fog = not channel.enable_fog
+                print(f"[*] Node C: Cloud Obscuration & Fog -> {'ENABLED' if channel.enable_fog else 'DISABLED'}")
+            elif key == ord('4'):
+                channel.enable_glare = not channel.enable_glare
+                print(f"[*] Node C: Solar Glare Flare -> {'ENABLED' if channel.enable_glare else 'DISABLED'}")
+            elif key == ord('5'):
+                channel.dropout_frames = 30  # 1 second blackout at 30 fps
+                print("[!] Node C: Triggered Optical Channel Fading Dropout (1s)")
 
     sock_rx.close()
     sock_tx.close()
-    cv2.destroyAllWindows()
+    if sock_stream is not None:
+        sock_stream.close()
+    if not args.headless:
+        cv2.destroyAllWindows()
     print("[+] Node C stopped.")
 
 if __name__ == "__main__":

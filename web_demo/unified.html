@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phoenix-X: Unified Autonomous Multi-Node Mission Control</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background-color: #080d14; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; }
+    .glass-card { background: #0f1724; border: 1px solid #1e293b; border-radius: 10px; }
+    .glass-card-glow { background: #0f1724; border: 1px solid #0284c7; box-shadow: 0 0 15px rgba(2, 132, 199, 0.15); border-radius: 10px; }
+    .feed-container { background: #000000; border: 1px solid #1e293b; position: relative; overflow: hidden; border-radius: 8px; }
+    .term-window { background: #030712; font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #080d14; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+  </style>
+</head>
+<body class="p-3 select-none flex flex-col min-h-screen">
+
+  <!-- ===================================================================== -->
+  <!-- Top Navigation & Status Bar                                           -->
+  <!-- ===================================================================== -->
+  <header class="glass-card px-4 py-3 mb-3 flex flex-wrap items-center justify-between gap-3 border-sky-900/50">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded bg-gradient-to-tr from-sky-600 to-emerald-400 flex items-center justify-center font-black text-black text-sm tracking-tighter">
+        PX
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm font-bold text-white tracking-wide uppercase">Phoenix-X: Unified Multi-Node Mission Control</h1>
+          <span class="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-sky-950 text-sky-400 border border-sky-800">SIH 26169 (ISRO / SAC)</span>
+        </div>
+        <p class="text-[11px] text-gray-400">All-in-One Autonomous Optical Tracking & Disturbance Emulation Cockpit</p>
+      </div>
+    </div>
+
+    <!-- Live Subsystem Health Status Indicators -->
+    <div class="flex flex-wrap items-center gap-2 text-[11px]">
+      <div id="stat-node-a" class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-sky-950/70 border border-sky-800 text-sky-300">
+        <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+        <span class="font-bold">NODE A:</span> SATELLITE (2000x2000)
+      </div>
+      <div id="stat-node-b" class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-950/70 border border-amber-800 text-amber-300">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+        <span class="font-bold">NODE B:</span> ATMOSPHERE (TURBULENT)
+      </div>
+      <div id="stat-node-c" class="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-950/70 border border-emerald-800 text-emerald-300">
+        <span id="dot-lock" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="font-bold">NODE C:</span> GROUND TRACKER (<span id="txt-lock-status">LOCKED</span>)
+      </div>
+    </div>
+
+    <!-- View Modes & Emergency Stop -->
+    <div class="flex items-center gap-2">
+      <div class="flex rounded bg-gray-900 p-0.5 border border-gray-800 text-xs">
+        <button id="btn-view-matrix" onclick="switchView('matrix')" class="px-2.5 py-1 rounded font-semibold bg-sky-600 text-white transition">3-Node Matrix</button>
+        <button id="btn-view-3d" onclick="switchView('3d')" class="px-2.5 py-1 rounded font-semibold text-gray-400 hover:text-white transition">3D Orbit WebGL</button>
+      </div>
+      <button onclick="emergencyShutdown()" class="text-xs px-2.5 py-1.5 rounded font-bold bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800 transition flex items-center gap-1">
+        <span>🛑</span> Shutdown
+      </button>
+    </div>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- View 1: 3-Node Live Visual Matrix (Default)                           -->
+  <!-- ===================================================================== -->
+  <main id="view-matrix" class="flex-1 flex flex-col gap-3">
+    
+    <!-- Row 1: The Three Live Optical Feeds -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      
+      <!-- Card 1: Node A Satellite Universe Radar -->
+      <div class="glass-card p-3 flex flex-col">
+        <div class="flex justify-between items-center mb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-sky-400"></span>
+            <span class="text-xs font-bold text-sky-400 uppercase tracking-wide">Terminal 1: Node A Satellite</span>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-950 border border-sky-800 text-sky-300">2000x2000 RADAR</span>
+        </div>
+        <div class="feed-container aspect-[4/3] flex items-center justify-center">
+          <img id="feed-a" src="/stream/node_a" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%2338bdf8\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Node A (UDP 9999)...</text></svg>'" class="w-full h-full object-contain">
+          <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/70 border border-gray-800 text-[10px] font-mono text-gray-300">
+            RADAR: <span id="tele-cam-pos">1000.0, 1000.0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Node B Atmospheric Channel Emulator -->
+      <div class="glass-card p-3 flex flex-col">
+        <div class="flex justify-between items-center mb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span class="text-xs font-bold text-amber-400 uppercase tracking-wide">Terminal 2: Active Channel MitM</span>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 border border-amber-800 text-amber-300">TURBULENT MEDIUM</span>
+        </div>
+        <div class="feed-container aspect-[4/3] flex items-center justify-center">
+          <img id="feed-b" src="/stream/node_b" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%23fbbf24\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Channel (UDP 9997)...</text></svg>'" class="w-full h-full object-contain">
+          <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/70 border border-gray-800 text-[10px] font-mono text-gray-300 flex items-center gap-1.5">
+            <span>Cn2: 5e-14</span> &bull; <span>10% S&amp;P</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Node C Ground Optical Tracker -->
+      <div class="glass-card p-3 flex flex-col">
+        <div class="flex justify-between items-center mb-2">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Terminal 3: Ground Tracker</span>
+          </div>
+          <span id="badge-mode" class="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300">AUTO-TRACK</span>
+        </div>
+        <div class="feed-container aspect-[4/3] flex items-center justify-center">
+          <img id="feed-c" src="/stream/node_c" onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'400\' height=\'300\'><rect fill=\'%23050811\' width=\'100%\' height=\'100%\'/><text fill=\'%2334d399\' x=\'50%\' y=\'50%\' text-anchor=\'middle\' font-size=\'14\'>Connecting to Tracker (UDP 9998)...</text></svg>'" class="w-full h-full object-contain">
+          <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/70 border border-gray-800 text-[10px] font-mono text-gray-300">
+            ERR: <span id="tele-err-arcsec" class="text-emerald-400 font-bold">0.00</span> arcsec
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Row 2: Telemetry Metrics Ribbon -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 text-xs">
+      <div class="glass-card p-2.5 flex flex-col">
+        <span class="text-[10px] text-gray-400 uppercase font-semibold">Alignment Status</span>
+        <span id="metric-lock" class="text-sm font-bold text-emerald-400">TARGET LOCKED</span>
+      </div>
+      <div class="glass-card p-2.5 flex flex-col">
+        <span class="text-[10px] text-gray-400 uppercase font-semibold">Centroid Error</span>
+        <div class="flex items-baseline gap-1">
+          <span id="metric-err-px" class="text-sm font-bold text-white font-mono">0.00</span>
+          <span class="text-[10px] text-gray-400">px</span>
+        </div>
+      </div>
+      <div class="glass-card p-2.5 flex flex-col">
+        <span class="text-[10px] text-gray-400 uppercase font-semibold">Optical Error</span>
+        <div class="flex items-baseline gap-1">
+          <span id="metric-err-arcsec" class="text-sm font-bold text-sky-400 font-mono">0.00</span>
+          <span class="text-[10px] text-gray-400">arcsec</span>
+        </div>
+      </div>
+      <div class="glass-card p-2.5 flex flex-col">
+        <span class="text-[10px] text-gray-400 uppercase font-semibold">Gimbal Slew Rate</span>
+        <div class="flex items-baseline gap-1">
+          <span id="metric-slew" class="text-sm font-bold text-amber-400 font-mono">0.00</span>
+          <span class="text-[10px] text-gray-400">&deg;/s (Max 5.0&deg;/s)</span>
+        </div>
+        <div class="w-full h-1 bg-gray-800 rounded-full mt-1 overflow-hidden">
+          <div id="bar-slew" class="h-full bg-amber-400 rounded-full transition-all duration-150" style="width: 0%"></div>
+        </div>
+      </div>
+      <div class="glass-card p-2.5 flex flex-col">
+        <span class="text-[10px] text-gray-400 uppercase font-semibold">Frame Rate</span>
+        <div class="flex items-baseline gap-1">
+          <span id="metric-fps" class="text-sm font-bold text-emerald-400 font-mono">30.0</span>
+          <span class="text-[10px] text-gray-400">FPS</span>
+        </div>
+      </div>
+      <div class="glass-card p-2.5 flex flex-col">
+        <span class="text-[10px] text-gray-400 uppercase font-semibold">Edge Latency</span>
+        <div class="flex items-baseline gap-1">
+          <span class="text-sm font-bold text-sky-400 font-mono">&lt; 1.8</span>
+          <span class="text-[10px] text-gray-400">ms (FP32 SIMD)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Master Remote Control Center & Live Multi-Terminal Console -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 flex-1">
+      
+      <!-- Interactive Controls Pad (5 cols) -->
+      <div class="lg:col-span-5 glass-card p-3 flex flex-col justify-between gap-3">
+        <div>
+          <div class="flex justify-between items-center mb-2 pb-1.5 border-b border-gray-800">
+            <span class="text-xs font-bold text-gray-300 uppercase tracking-wide">Master Remote Control Station</span>
+            <span class="text-[10px] text-sky-400 font-mono">CLOSED-LOOP HIL</span>
+          </div>
+
+          <!-- Section 1: Atmospheric Disturbances (Channel) -->
+          <div class="mb-3">
+            <div class="text-[11px] font-bold text-amber-400 uppercase mb-1.5">Atmospheric Optical Disturbances (Node B)</div>
+            <div class="grid grid-cols-2 gap-1.5 text-xs">
+              <button onclick="sendControl('channel', 'toggle_turbulence')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between">
+                <span>Kolmogorov Turbulence</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">TOGGLE</span>
+              </button>
+              <button onclick="sendControl('channel', 'toggle_fog')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between">
+                <span>Beer-Lambert Fog</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">TOGGLE</span>
+              </button>
+              <button onclick="sendControl('channel', 'step_noise')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between">
+                <span>Salt &amp; Pepper Noise</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">0&rarr;10&rarr;25%</span>
+              </button>
+              <button onclick="sendControl('channel', 'glare')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-amber-700/60 font-medium text-left flex items-center justify-between">
+                <span>Solar Glare Flare</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">FLASH</span>
+              </button>
+              <button onclick="sendControl('channel', 'blackout')" class="p-2 rounded bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-red-700/60 font-medium text-left col-span-2 flex items-center justify-between">
+                <span>Channel Fading Dropout (Deep Scintillation)</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-950 text-red-400 border border-red-800">1s BLACKOUT</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Section 2: Satellite Dynamics -->
+          <div class="mb-3">
+            <div class="text-[11px] font-bold text-sky-400 uppercase mb-1.5">Satellite Kinematics (Node A)</div>
+            <div class="flex gap-2 text-xs">
+              <button onclick="sendControl('satellite', 'evasive')" class="flex-1 p-2 rounded bg-sky-950/60 hover:bg-sky-900/60 border border-sky-800 font-bold text-sky-300 transition flex items-center justify-center gap-1.5">
+                <span>⚡</span> Trigger High-G Evasive Jump
+              </button>
+            </div>
+          </div>
+
+          <!-- Section 3: Ground PTZ Slew & Gimbal Override -->
+          <div>
+            <div class="text-[11px] font-bold text-emerald-400 uppercase mb-1.5">Gimbal PTZ Slew Control (Node C)</div>
+            <div class="flex flex-wrap items-center justify-between gap-2 p-2 bg-gray-950/60 rounded border border-gray-800">
+              <div class="flex items-center gap-1">
+                <button onclick="sendPTZ('pan_left')" class="px-2.5 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700">&larr; Left</button>
+                <div class="flex flex-col gap-1">
+                  <button onclick="sendPTZ('tilt_up')" class="px-2.5 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700">&uarr; Up</button>
+                  <button onclick="sendPTZ('tilt_down')" class="px-2.5 py-0.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700">&darr; Down</button>
+                </div>
+                <button onclick="sendPTZ('pan_right')" class="px-2.5 py-1 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-sky-400 border border-gray-700">Right &rarr;</button>
+              </div>
+
+              <div class="flex items-center gap-1.5">
+                <button onclick="sendPTZ('toggle_auto')" class="px-2.5 py-1.5 text-xs font-bold rounded bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800">
+                  Auto / Manual
+                </button>
+                <button onclick="sendPTZ('recenter')" class="px-2.5 py-1.5 text-xs font-bold rounded bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700">
+                  Re-Center
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-[10px] text-gray-500 text-center font-mono">
+          PID GIMBAL CONTROLLER &bull; STRICTLY CLAMPED TO &le; 5.0&deg;/s
+        </div>
+      </div>
+
+      <!-- Live Multi-Terminal Console Stream (7 cols) -->
+      <div class="lg:col-span-7 glass-card p-3 flex flex-col">
+        <div class="flex justify-between items-center mb-2 pb-1.5 border-b border-gray-800">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            <span class="text-xs font-bold text-gray-300 uppercase tracking-wide">Live Multi-Terminal Console Stream</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="clearLogs()" class="text-[10px] px-2 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-400">Clear</button>
+            <label class="text-[10px] text-gray-400 flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" id="autoscroll-chk" checked class="rounded"> Auto-scroll
+            </label>
+          </div>
+        </div>
+
+        <!-- Terminal Output Window -->
+        <div id="terminal-feed" class="term-window flex-1 p-2.5 rounded border border-gray-900 overflow-y-auto text-[11px] leading-relaxed max-h-80 select-text">
+          <div class="text-gray-500">[System] Initializing Phoenix-X Multi-Node Telemetry Stream...</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- View 2: 3D Orbital Geometry (Three.js Embed)                          -->
+  <!-- ===================================================================== -->
+  <main id="view-3d" class="hidden flex-1 flex flex-col glass-card overflow-hidden">
+    <div class="p-3 border-b border-gray-800 flex justify-between items-center bg-[#0d1420]">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+        <span class="text-xs font-bold text-indigo-300 uppercase tracking-wide">3D Interactive Earth-Orbit Laser Link Visualizer (Three.js WebGL)</span>
+      </div>
+      <a href="threejs_visualizer.html" target="_blank" class="text-xs px-2.5 py-1 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 hover:bg-indigo-900 transition">
+        Open Fullscreen &nearr;
+      </a>
+    </div>
+    <div class="flex-1 w-full relative min-h-[620px]">
+      <iframe src="threejs_visualizer.html" class="w-full h-full border-0 absolute inset-0"></iframe>
+    </div>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- Client JavaScript Logic                                               -->
+  <!-- ===================================================================== -->
+  <script>
+    let currentView = 'matrix';
+    let lastLogCount = 0;
+
+    function switchView(viewName) {
+      currentView = viewName;
+      const vMatrix = document.getElementById('view-matrix');
+      const v3d = document.getElementById('view-3d');
+      const btnMatrix = document.getElementById('btn-view-matrix');
+      const btn3d = document.getElementById('btn-view-3d');
+
+      if (viewName === 'matrix') {
+        vMatrix.classList.remove('hidden');
+        v3d.classList.add('hidden');
+        btnMatrix.className = "px-2.5 py-1 rounded font-semibold bg-sky-600 text-white transition";
+        btn3d.className = "px-2.5 py-1 rounded font-semibold text-gray-400 hover:text-white transition";
+      } else {
+        vMatrix.classList.add('hidden');
+        v3d.classList.remove('hidden');
+        btnMatrix.className = "px-2.5 py-1 rounded font-semibold text-gray-400 hover:text-white transition";
+        btn3d.className = "px-2.5 py-1 rounded font-semibold bg-indigo-600 text-white transition";
+      }
+    }
+
+    async function sendControl(target, action) {
+      try {
+        await fetch(`/control?target=${target}&action=${action}`);
+      } catch (e) {
+        console.error("Control dispatch failed", e);
+      }
+    }
+
+    async function sendPTZ(cmd) {
+      try {
+        await fetch(`/ptz?cmd=${cmd}`);
+      } catch (e) {
+        console.error("PTZ dispatch failed", e);
+      }
+    }
+
+    async function emergencyShutdown() {
+      if (confirm("Are you sure you want to stop all 3 nodes and shutdown the simulator?")) {
+        await fetch('/control?action=shutdown');
+        alert("Shutdown signal sent. All background nodes have been stopped.");
+      }
+    }
+
+    // Poll Real-Time Telemetry
+    async function updateTelemetry() {
+      try {
+        const res = await fetch('/telemetry');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Update indicators
+        document.getElementById('metric-err-px').textContent = data.error_px.toFixed(2);
+        document.getElementById('metric-err-arcsec').textContent = data.error_arcsec.toFixed(2);
+        document.getElementById('tele-err-arcsec').textContent = data.error_arcsec.toFixed(2);
+        document.getElementById('metric-slew').textContent = data.slew_rate_deg_s.toFixed(2);
+        document.getElementById('metric-fps').textContent = data.fps.toFixed(1);
+        document.getElementById('tele-cam-pos').textContent = `${data.cam_x.toFixed(1)}, ${data.cam_y.toFixed(1)}`;
+
+        // Slew progress bar (clamped to 5.0 deg/s)
+        const pct = Math.min(100, (data.slew_rate_deg_s / 5.0) * 100);
+        document.getElementById('bar-slew').style.width = `${pct}%`;
+        if (pct > 85) {
+          document.getElementById('bar-slew').className = "h-full bg-red-500 rounded-full transition-all duration-150";
+        } else {
+          document.getElementById('bar-slew').className = "h-full bg-amber-400 rounded-full transition-all duration-150";
+        }
+
+        // Lock status
+        const isLocked = data.locked;
+        const txtLock = document.getElementById('txt-lock-status');
+        const metricLock = document.getElementById('metric-lock');
+        const dotLock = document.getElementById('dot-lock');
+        if (isLocked) {
+          txtLock.textContent = "LOCKED";
+          metricLock.textContent = "TARGET LOCKED";
+          metricLock.className = "text-sm font-bold text-emerald-400";
+          dotLock.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        } else {
+          txtLock.textContent = "RE-ACQUIRING";
+          metricLock.textContent = "ACQUISITION SCAN";
+          metricLock.className = "text-sm font-bold text-amber-400 animate-pulse";
+          dotLock.className = "w-2 h-2 rounded-full bg-amber-400 animate-ping";
+        }
+
+        // Mode badge
+        const badgeMode = document.getElementById('badge-mode');
+        if (data.auto_track) {
+          badgeMode.textContent = "AUTO-TRACK";
+          badgeMode.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 border border-emerald-800 text-emerald-300";
+        } else {
+          badgeMode.textContent = "MANUAL OVERRIDE";
+          badgeMode.className = "text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 border border-amber-800 text-amber-300";
+        }
+
+      } catch (e) {
+        // Quietly catch during startup
+      }
+    }
+
+    // Poll Real-Time Terminal Logs
+    async function updateLogs() {
+      try {
+        const res = await fetch('/logs');
+        if (!res.ok) return;
+        const logs = await res.json();
+        
+        if (logs.length !== lastLogCount) {
+          lastLogCount = logs.length;
+          const container = document.getElementById('terminal-feed');
+          container.innerHTML = logs.map(l => {
+            let col = "text-sky-400";
+            if (l.node === "CHANNEL") col = "text-amber-400";
+            if (l.node === "TRACKER") col = "text-emerald-400";
+            if (l.node === "MASTER") col = "text-purple-400";
+
+            return `<div class="mb-1"><span class="text-gray-500 font-mono">[${l.timestamp}]</span> <span class="${col} font-bold font-mono">[${l.node}]</span> <span class="text-gray-300">${escapeHtml(l.message)}</span></div>`;
+          }).join('');
+
+          if (document.getElementById('autoscroll-chk').checked) {
+            container.scrollTop = container.scrollHeight;
+          }
+        }
+      } catch (e) {
+        // Quiet during poll
+      }
+    }
+
+    function clearLogs() {
+      document.getElementById('terminal-feed').innerHTML = '';
+      lastLogCount = 0;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Run loops
+    setInterval(updateTelemetry, 150);
+    setInterval(updateLogs, 400);
+  </script>
+</body>
+</html>
