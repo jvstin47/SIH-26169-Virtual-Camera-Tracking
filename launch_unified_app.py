@@ -29,11 +29,21 @@ from datetime import datetime
 WORKSPACE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, WORKSPACE_DIR)
 
+import cv2
+import numpy as np
+
+# Generate initial tactical placeholder frame so streams never start blank
+_init_canvas = np.zeros((480, 640, 3), dtype=np.uint8)
+cv2.putText(_init_canvas, "PHOENIX-X OPTICAL TELEMETRY LINK", (130, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 190, 255), 1, cv2.LINE_AA)
+cv2.putText(_init_canvas, "CONNECTING TO DISTRIBUTED SENSORS...", (145, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (120, 160, 200), 1, cv2.LINE_AA)
+_, _init_enc = cv2.imencode(".jpg", _init_canvas, [cv2.IMWRITE_JPEG_QUALITY, 55])
+INIT_PLACEHOLDER = _init_enc.tobytes()
+
 # Global State & Buffers
 STREAM_FRAMES = {
-    "node_a": None,
-    "node_b": None,
-    "node_c": None
+    "node_a": INIT_PLACEHOLDER,
+    "node_b": INIT_PLACEHOLDER,
+    "node_c": INIT_PLACEHOLDER
 }
 LATEST_TELEMETRY = {
     "frame_id": 0,
@@ -69,22 +79,39 @@ def append_log(node_name: str, message: str):
         if len(LOG_BUFFER) > MAX_LOG_ENTRIES:
             LOG_BUFFER.pop(0)
 
+from src.core.network import UDPReceiver, UDPSender
+
 # -----------------------------------------------------------------------------
 # Background UDP Stream Capture Receivers
 # -----------------------------------------------------------------------------
+def cleanup_zombie_ports():
+    """Kills any orphaned python processes holding demo ports or running node scripts before startup."""
+    try:
+        subprocess.run(["pkill", "-9", "-f", "distributed_demo/(target_satellite|atmospheric_channel|ground_tracker).py"], check=False)
+    except Exception:
+        pass
+    ports = (9999, 9998, 9997, 9996, 9995, 9981, 9982, 9983, 9984)
+    for port in ports:
+        try:
+            out = subprocess.check_output(["lsof", "-t", f"-i:{port}"], stderr=subprocess.DEVNULL).decode()
+            pids = [int(p) for p in out.strip().split() if int(p) != os.getpid()]
+            for pid in pids:
+                try: os.kill(pid, 9)
+                except Exception: pass
+        except Exception:
+            pass
+
 def udp_stream_receiver(port: int, key: str):
-    """Captures JPEG frames mirrored by child nodes."""
+    """Captures JPEG frames mirrored by child nodes with transparent UDP fragmentation."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("127.0.0.1", port))
-    sock.settimeout(0.5)
+    sock.settimeout(0.2)
+    receiver = UDPReceiver(sock)
     while not IS_SHUTTING_DOWN:
-        try:
-            data, _ = sock.recvfrom(65535)
-            STREAM_FRAMES[key] = data
-        except socket.timeout:
-            continue
-        except Exception:
-            break
+        res = receiver.receive_frame()
+        if res is not None:
+            _, payload = res
+            STREAM_FRAMES[key] = payload
     sock.close()
 
 def udp_telemetry_receiver(port: int):
@@ -92,7 +119,7 @@ def udp_telemetry_receiver(port: int):
     global LATEST_TELEMETRY
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("127.0.0.1", port))
-    sock.settimeout(0.5)
+    sock.settimeout(0.2)
     while not IS_SHUTTING_DOWN:
         try:
             data, _ = sock.recvfrom(4096)
@@ -258,6 +285,10 @@ def launch_all(headless: bool = False, open_browser: bool = True, http_port: int
     print(f"[*] Workspace Root: {WORKSPACE_DIR}")
     print(f"[*] Visual Display Mode: {'Web Cockpit (Headless Terminal Nodes)' if headless else 'Desktop GUI (OpenCV Windows + Web Cockpit)'}")
     print(f"[*] Web Server Address: http://localhost:{http_port}/unified.html\n")
+
+    # Clean up any leftover zombie processes from previous sessions
+    cleanup_zombie_ports()
+    time.sleep(0.2)
 
     # 1. Start Stream and Telemetry UDP Listeners
     threading.Thread(target=udp_stream_receiver, args=(9981, "node_a"), daemon=True).start()

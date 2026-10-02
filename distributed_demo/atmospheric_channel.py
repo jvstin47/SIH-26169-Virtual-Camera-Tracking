@@ -172,6 +172,7 @@ def main():
 
     sock_stream = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) if args.stream_port > 0 else None
     stream_addr = ("127.0.0.1", args.stream_port) if args.stream_port > 0 else None
+    stream_sender = UDPSender(sock_stream, stream_addr) if args.stream_port > 0 else None
 
     receiver = UDPReceiver(sock_rx)
     sender = UDPSender(sock_tx, node_b_addr)
@@ -276,10 +277,10 @@ def main():
                 print("[!] Node B Channel: Remote Trigger Optical Blackout (1s)")
 
         # Stream HUD JPEG to web server if requested
-        if sock_stream is not None:
+        if stream_sender is not None:
             try:
                 _, jpg_stream = cv2.imencode('.jpg', hud, [cv2.IMWRITE_JPEG_QUALITY, 60])
-                sock_stream.sendto(jpg_stream.tobytes(), stream_addr)
+                stream_sender.send_frame(frame_id, jpg_stream.tobytes())
             except Exception:
                 pass
 

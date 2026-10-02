@@ -27,7 +27,7 @@ from src.core.coordinates import (
 )
 from src.vision.tracker import BeaconTracker
 from src.control.gimbal_controller import GimbalController
-from src.core.network import UDPReceiver
+from src.core.network import UDPReceiver, UDPSender
 
 # Shared global state for gimbal and telemetry
 GIMBAL_STATE = {
@@ -187,6 +187,7 @@ def main():
 
     sock_stream = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) if args.stream_port > 0 else None
     stream_addr = ("127.0.0.1", args.stream_port) if args.stream_port > 0 else None
+    stream_sender = UDPSender(sock_stream, stream_addr) if args.stream_port > 0 else None
 
     sock_telem = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) if args.telemetry_port > 0 else None
     telem_addr = ("127.0.0.1", args.telemetry_port) if args.telemetry_port > 0 else None
@@ -259,11 +260,16 @@ def main():
             if tracker.loss_frames > 35:
                 # Autonomous Expanding Spiral Re-Acquisition Scan (IEEE ICSOS 2025 PAT standard)
                 # When lock is broken by blackout or extreme flare, sweep in an expanding spiral
+                if tracker.loss_frames > 110:
+                    tracker.loss_frames = 36 # reset spiral search back to center
+                    GIMBAL_STATE["cam_x"] = UNIVERSE_WIDTH_PX / 2.0
+                    GIMBAL_STATE["cam_y"] = UNIVERSE_HEIGHT_PX / 2.0
+
                 scan_t = (tracker.loss_frames - 35) * 0.033
-                scan_radius = min(350.0, 40.0 + scan_t * 60.0)
-                scan_angle = scan_t * 3.5
-                cmd_vx = scan_radius * 3.5 * (-math.sin(scan_angle))
-                cmd_vy = scan_radius * 3.5 * (math.cos(scan_angle))
+                scan_radius = min(220.0, 25.0 + scan_t * 50.0)
+                scan_angle = scan_t * 3.8
+                cmd_vx = scan_radius * 3.8 * (-math.sin(scan_angle))
+                cmd_vy = scan_radius * 3.8 * (math.cos(scan_angle))
             else:
                 # Autonomous AI Tracking Mode (PID + Kalman Feedforward)
                 cmd_vx, cmd_vy = controller.update(detected_pos, dt)
@@ -356,10 +362,10 @@ def main():
                 pass
 
         # Stream BGR tracking frame to web server if requested
-        if sock_stream is not None:
+        if stream_sender is not None:
             try:
                 _, jpg_stream = cv2.imencode('.jpg', bgr, [cv2.IMWRITE_JPEG_QUALITY, 60])
-                sock_stream.sendto(jpg_stream.tobytes(), stream_addr)
+                stream_sender.send_frame(frame_count, jpg_stream.tobytes())
             except Exception:
                 pass
 
