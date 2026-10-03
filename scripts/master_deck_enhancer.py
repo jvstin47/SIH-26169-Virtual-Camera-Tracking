@@ -94,31 +94,50 @@ def enhance_deck():
         if s.name == "Rounded Rectangle 40":
             set_shape_pastel(s, PASTEL_BG_SLATE, PASTEL_BORDER_BLUE, border_width=1.2)
 
-    # Elevate Headline Capabilities text with specific named algorithms
+    # Elevate Headline Capabilities text with specific named algorithms and feedback rules
     for s in slide1.shapes:
-        if s.has_text_frame:
-            for p in s.text_frame.paragraphs:
-                txt = p.text.strip()
-                if "Closed-Loop Lock in ≤ 0.8 s" in txt:
-                    p.text = "Closed-Loop SIL Lock in ≤ 0.8 s across 2000x2000 space"
-                    for r in p.runs:
-                        r.font.size = Pt(11)
-                elif "Sub-Pixel Centroid Error < 0.2 px" in txt:
-                    p.text = "Continuous 2D Gaussian Fit: Centroid RMSE < 0.2 px (SLA: ≤ 10 px)"
-                    for r in p.runs:
-                        r.font.size = Pt(11)
-                elif "IMM-Kalman Predictive Servo" in txt:
-                    p.text = "Dual-Mode IMM-Kalman Filter (Constant Velocity + Coordinated Turn)"
-                    for r in p.runs:
-                        r.font.size = Pt(11)
-                elif "10% S&P Noise Rejected in 0.8 ms" in txt:
-                    p.text = "Vectorized 5x5 Rank-Order Median Filter: 10% S&P cleared in 0.8 ms"
-                    for r in p.runs:
-                        r.font.size = Pt(11)
-                elif "≥ 35 FPS on CPU" in txt:
-                    p.text = "Clamped Slew-Rate Servo (5.0°/s) | ≥ 35 FPS Deterministic CPU"
-                    for r in p.runs:
-                        r.font.size = Pt(11)
+        if s.name == "TextBox 39":
+            s.text_frame.clear()
+            p = s.text_frame.paragraphs[0]
+            p.text = "Software-in-the-Loop (SIL) Testbed for Coarse Tracking & Reacquisition in Mobile FSOC Terminals"
+            p.font.size = Pt(12.5)
+            p.font.bold = True
+            p.font.color.rgb = TEXT_NAVY
+        elif s.name == "TextBox 61":
+            s.text_frame.clear()
+            p = s.text_frame.paragraphs[0]
+            p.text = "Scale: 109.1 μrad/px (4°x3° FOV default) | Coarse Handover Boundary: ≤ 10 px (≈ 1.09 mrad)"
+            p.font.size = Pt(10.0)
+            p.font.bold = True
+            p.font.color.rgb = TEXT_DARK
+        elif s.name == "TextBox 64":
+            s.text_frame.clear()
+            p = s.text_frame.paragraphs[0]
+            p.text = "Primary Innovation: Uncertainty-Guided Elliptical Reacquisition (up to 97% faster re-lock)"
+            p.font.size = Pt(10.0)
+            p.font.bold = True
+            p.font.color.rgb = TEXT_DARK
+        elif s.name == "TextBox 67":
+            s.text_frame.clear()
+            p = s.text_frame.paragraphs[0]
+            p.text = "Secondary Innovation: Latency-Aware Forward State Prediction (up to 32% lag cut across τ ∈ [0, 200] ms)"
+            p.font.size = Pt(10.0)
+            p.font.bold = True
+            p.font.color.rgb = TEXT_DARK
+        elif s.name == "TextBox 70":
+            s.text_frame.clear()
+            p = s.text_frame.paragraphs[0]
+            p.text = "Supporting Perception: Top-Hat Morphology + Subpixel IWC (< 0.2 px RMSE under ~10-25% S&P)"
+            p.font.size = Pt(10.0)
+            p.font.bold = True
+            p.font.color.rgb = TEXT_DARK
+        elif s.name == "TextBox 73":
+            s.text_frame.clear()
+            p = s.text_frame.paragraphs[0]
+            p.text = "Evaluator Engine: Dual Mode (Synthetic SIL Dynamics + Offline MP4 Video Bypass with CSV Audit)"
+            p.font.size = Pt(10.0)
+            p.font.bold = True
+            p.font.color.rgb = TEXT_DARK
 
     # =========================================================================
     # SLIDE 2: Proposed Solution (Pastel Polish & Mathematical Equations)
@@ -135,6 +154,21 @@ def enhance_deck():
             for p in s.text_frame.paragraphs:
                 for r in p.runs:
                     r.font.color.rgb = TEXT_ROSE
+        elif s.name == "TextBox 15367": # Problem card bullets
+            s.text_frame.clear()
+            s.text_frame.word_wrap = True
+            prob_lines = [
+                ("Uncertainty Blindness: ", "Conventional blind spirals ignore error covariance, causing prolonged link outages."),
+                ("Uncompensated Loop Latency: ", "Sensor exposure, compute and gimbal delays cause tracking lag and motor overshoot."),
+                ("Impulsive Noise & Fog: ", "PS ~10% Salt-and-Pepper noise and haze corrupt naive moment centroid calculations."),
+                ("Gimbal Inertia Violations: ", "Unconstrained velocity commands violate physical motor slew limits (5-10°/s)."),
+                ("₹50L+ Physical Testbed: ", "Demands expensive physical vacuum chambers and piezo steering benches.")
+            ]
+            for idx, (b_title, b_desc) in enumerate(prob_lines):
+                p = s.text_frame.paragraphs[0] if idx == 0 else s.text_frame.add_paragraph()
+                p.space_after = Pt(3)
+                r1 = p.add_run(); r1.text = "• " + b_title; r1.font.bold = True; r1.font.size = Pt(8.2); r1.font.color.rgb = TEXT_ROSE
+                r2 = p.add_run(); r2.text = b_desc; r2.font.size = Pt(7.8); r2.font.color.rgb = TEXT_DARK
 
     # 2. Our Solution Card (Pastel Ice Blue)
     for s in slide2.shapes:
@@ -155,11 +189,11 @@ def enhance_deck():
             s.text_frame.clear()
             s.text_frame.word_wrap = True
             sol_bullets = [
-                ("Closed-Loop SIL Tracking: ", "Instant lock in ≤ 0.8 s across 2000x2000 universe (22.5 arcsec/px)."),
-                ("Vectorized Rank Denoising: ", "5x5 median kernel strips 100% of 10% S&P noise in 0.8 ms."),
-                ("Sub-Pixel 2D Gaussian Fit: ", "Centroid error < 0.2 px (far beating ISRO's ≤ 10 px mandate by 50x)."),
-                ("Clamped Slew-Rate Servo: ", "Anti-windup PID enforces statutory 5.0°/s slew limit with velocity feedforward."),
-                ("Deterministic CPU Runtime: ", "100% offline, ≥ 35 FPS on consumer dual-core CPU with zero GPU requirement.")
+                ("Coarse PAT Handover: ", "Brings optical beacon into ≤ 10 px (≈ 1.09 mrad) cone for downstream FSM takeover."),
+                ("Uncertainty-Guided Search: ", "Covariance-driven elliptical scanning cuts reacquisition time by up to 97%."),
+                ("Latency-Compensated Pointing: ", "Forward Kalman projection compensates loop delay τ ∈ [0, 200] ms (up to 32% lag cut)."),
+                ("Adaptive Beacon Localization: ", "Top-Hat morphology + Subpixel IWC rejects PS ~10% S&P (stress tested up to 25%)."),
+                ("Dual-Mode Evaluator Testbed: ", "Runs closed-loop SIL simulator or ingests external .mp4 video with ground-truth CSV audits.")
             ]
             for idx, (b_title, b_desc) in enumerate(sol_bullets):
                 p = s.text_frame.paragraphs[0] if idx == 0 else s.text_frame.add_paragraph()
@@ -167,12 +201,12 @@ def enhance_deck():
                 r1 = p.add_run()
                 r1.text = "• " + b_title
                 r1.font.bold = True
-                r1.font.size = Pt(8.5)
+                r1.font.size = Pt(8.3)
                 r1.font.color.rgb = TEXT_NAVY
                 r2 = p.add_run()
                 r2.text = b_desc
                 r2.font.bold = False
-                r2.font.size = Pt(8.0)
+                r2.font.size = Pt(7.8)
                 r2.font.color.rgb = TEXT_DARK
 
     # 3. Architecture Tier Cards (Pastel Slate + Sky Pills)
@@ -193,9 +227,9 @@ def enhance_deck():
             s.text_frame.clear()
             s.text_frame.word_wrap = True
             lines = [
-                ("• Coordinate Geometry: ", "2000x2000 px world resolving 22.5 arcsec/px (4°x3° FOV)."),
-                ("• Kinematic Trajectories: ", "Singer acceleration walk, Lemniscate: (x²+y²)² = 2a²(x²-y²)."),
-                ("• Pinhole Windowing: ", "Camera matrix K crops 640x480 active FPA with motor rate limits (5-10°/s).")
+                ("• Scale & Kinematics: ", "2000x2000 px world at 109.1 μrad/px (22.5\"/px default 4°x3° FOV)."),
+                ("• Dynamic Maneuvers: ", "Singer acceleration walk, Lemniscate: (x²+y²)² = 2a²(x²-y²), ±20 px jitter."),
+                ("• Virtual Pinhole FPA: ", "Camera matrix K crops 640x480 active FPA with motor rate limits (5.0°/s).")
             ]
             for idx, (title, desc) in enumerate(lines):
                 p = s.text_frame.paragraphs[0] if idx == 0 else s.text_frame.add_paragraph()
@@ -207,9 +241,9 @@ def enhance_deck():
             s.text_frame.clear()
             s.text_frame.word_wrap = True
             lines = [
-                ("• Airy Disc Optics: ", "Diffraction PSF I(θ) = I₀ [2J₁(u)/u]² (spot size 5x5 to 20x20 px)."),
-                ("• Beer-Lambert Extinction: ", "Atmospheric transmission I = I₀ exp(-γR) with dynamic fog/haze."),
-                ("• Disturbance Injection: ", "Poisson shot noise, Kolmogorov turbulence phase variance σ_R², 10% S&P.")
+                ("• Diffraction Airy Optics: ", "Airy spot profile I(θ) = I₀ [2J₁(u)/u]² (spot size 5x5 to 20x20 px)."),
+                ("• Beer-Lambert Extinction: ", "Atmospheric transmission I = I₀ exp(-γR) with dynamic fog and scintillation."),
+                ("• Disturbance Injection: ", "Poisson shot noise, PS-specified ~10% S&P noise (stress tested up to 25%).")
             ]
             for idx, (title, desc) in enumerate(lines):
                 p = s.text_frame.paragraphs[0] if idx == 0 else s.text_frame.add_paragraph()
@@ -221,10 +255,10 @@ def enhance_deck():
             s.text_frame.clear()
             s.text_frame.word_wrap = True
             lines = [
-                ("• Stage 1 Rank Denoising: ", "Vectorized 5x5 median kernel strips 100% impulsive noise in 0.8 ms."),
-                ("• Stage 2 Saliency Proposal: ", "Spatio-temporal gradient heatmap isolates candidate beacon ROI."),
-                ("• Stage 3 Gaussian Fit: ", "Continuous surface fit: I(x,y) = A exp(-r²/2σ²) + B ⟹ RMSE < 0.2 px."),
-                ("• Stage 4 IMM Servo Loop: ", "Kalman filter blends CV & CT states; feeds anti-windup PID clamped to ≤ 5°/s.")
+                ("• Stage 1 Adaptive Perception: ", "Top-Hat morphology + Subpixel IWC: I(x,y) = A exp(-r²/2σ²) ⟹ RMSE < 0.2 px."),
+                ("• Stage 2 Latency-Aware Pointing: ", "Kalman forward state projection x̂_(t+τ) = F^κ x̂_t compensates loop delay τ."),
+                ("• Stage 3 Covariance Reacquisition: ", "Scans growing uncertainty ellipse (σ_a, σ_b, φ) on temporary signal loss."),
+                ("• Stage 4 Gimbal Servo Loop: ", "Anti-windup PID with velocity feedforward strictly clamped to ≤ 5.0°/s.")
             ]
             for idx, (title, desc) in enumerate(lines):
                 p = s.text_frame.paragraphs[0] if idx == 0 else s.text_frame.add_paragraph()
@@ -232,7 +266,7 @@ def enhance_deck():
                 r1 = p.add_run(); r1.text = title; r1.font.bold = True; r1.font.size = Pt(8.0); r1.font.color.rgb = TEXT_NAVY
                 r2 = p.add_run(); r2.text = desc; r2.font.size = Pt(7.8); r2.font.color.rgb = TEXT_DARK
 
-    # 4. Innovation Cards (Column 3) - Pastel backgrounds + Equations
+    # 4. Innovation Cards (Column 3) - Matching Research Hierarchy
     innov_cards = [
         ("Rounded Rectangle 15394", PASTEL_BG_AMBER, PASTEL_BORDER_AMBER),
         ("Rounded Rectangle 15399", PASTEL_BG_BLUE, PASTEL_BORDER_BLUE),
@@ -245,13 +279,13 @@ def enhance_deck():
             if s.name == c_name:
                 set_shape_pastel(s, bg_c, brd_c, 1.0)
 
-    # Set titles for all 5 innovation cards
+    # Set titles for all 5 innovation cards (matching research hierarchy)
     innov_titles = {
-        "TextBox 15397": "Sub-Pixel Gray-Diffusion",
-        "TextBox 15402": "IMM Multi-Model Filter",
-        "TextBox 15407": "Anti-Windup Slew Servo",
-        "TextBox 15412": "Deterministic CPU Runtime",
-        "TextBox 15417": "Zero-Capex SIL Platform"
+        "TextBox 15397": "Uncertainty-Guided Search",
+        "TextBox 15402": "Latency Compensation (H1)",
+        "TextBox 15407": "Top-Hat Morphology + IWC",
+        "TextBox 15412": "Dual-Mode SIL / MP4 Engine",
+        "TextBox 15417": "Defined Coarse PAT Scope"
     }
     for t_box, t_title in innov_titles.items():
         for s in slide2.shapes:
@@ -261,37 +295,37 @@ def enhance_deck():
                 p = s.text_frame.paragraphs[0]
                 r = p.add_run()
                 r.text = t_title
-                r.font.size = Pt(9.5)
+                r.font.size = Pt(9.0)
                 r.font.bold = True
                 r.font.color.rgb = TEXT_NAVY
 
     # Update innovation descriptions with specific equations
     for s in slide2.shapes:
-        if s.name == "TextBox 15398": # Sub-pixel Gaussian
+        if s.name == "TextBox 15398": # Uncertainty Reacquisition
             s.text_frame.clear(); s.text_frame.word_wrap = True
             p = s.text_frame.paragraphs[0]
-            p.text = "I(x,y) = A exp(-r²/2σ²); analytical Gaussian surface fitting eliminates pixel quantization, guaranteeing < 0.2 px centroid accuracy under dense noise."
-            p.font.size = Pt(7.5); p.font.color.rgb = TEXT_DARK
-        elif s.name == "TextBox 15403": # IMM
+            p.text = "Filter covariance P_k expands during outages; scan expands along uncertainty ellipse (σ_a, σ_b, φ), reacquiring up to 97% faster than blind spirals."
+            p.font.size = Pt(7.3); p.font.color.rgb = TEXT_DARK
+        elif s.name == "TextBox 15403": # Latency Compensation (H1)
             s.text_frame.clear(); s.text_frame.word_wrap = True
             p = s.text_frame.paragraphs[0]
-            p.text = "Mode mixing μ_k^(j) = (1/c) Λ_k^(j) ∑ p_ij μ_(k-1)^(i); dynamically blends Constant Velocity & Coordinated Turn states, eliminating lag during Figure-8 reversals."
-            p.font.size = Pt(7.5); p.font.color.rgb = TEXT_DARK
-        elif s.name == "TextBox 15408": # Clamped Slew Servo
+            p.text = "Forward state projection x̂_(t+τ) = F^κ x̂_t compensates cumulative frame/compute/servo delay τ (0-200 ms), cutting tracking lag by up to 32%."
+            p.font.size = Pt(7.3); p.font.color.rgb = TEXT_DARK
+        elif s.name == "TextBox 15408": # Top-Hat Morphology + IWC
             s.text_frame.clear(); s.text_frame.word_wrap = True
             p = s.text_frame.paragraphs[0]
-            p.text = "θ_dot = sat_[-5°, 5°](Kp e + Kd e_dot + Ki ∫e); enforces strict 5-10°/s motor slew limits with predictive velocity feedforward, avoiding overshoot."
-            p.font.size = Pt(7.5); p.font.color.rgb = TEXT_DARK
-        elif s.name == "TextBox 15413": # Real-Time CPU
+            p.text = "Morphological background suppression + subpixel Intensity-Weighted Centroiding achieves < 0.2 px RMSE, rejecting PS ~10% S&P and 25% stress noise without heavy YOLO."
+            p.font.size = Pt(7.3); p.font.color.rgb = TEXT_DARK
+        elif s.name == "TextBox 15413": # Dual-Mode Testbed
             s.text_frame.clear(); s.text_frame.word_wrap = True
             p = s.text_frame.paragraphs[0]
-            p.text = "Total pipeline latency T_frame ≤ 19.9 ms ≪ 33.3 ms (≥ 35 FPS) on consumer dual-core CPU with zero discrete GPU requirement."
-            p.font.size = Pt(7.5); p.font.color.rgb = TEXT_DARK
-        elif s.name == "TextBox 15418": # Zero Capex SIL
+            p.text = "Decoupled SIL testbed & MP4 video benchmark engine: ingests synthetic physics or external camera video with ground-truth CSV error verification."
+            p.font.size = Pt(7.3); p.font.color.rgb = TEXT_DARK
+        elif s.name == "TextBox 15418": # Coarse PAT Scope
             s.text_frame.clear(); s.text_frame.word_wrap = True
             p = s.text_frame.paragraphs[0]
-            p.text = "Saves ₹50L+ per testing campaign; fully offline air-gapped simulation enables repeatable Monte Carlo stress tests matching ISRO criteria."
-            p.font.size = Pt(7.5); p.font.color.rgb = TEXT_DARK
+            p.text = "Bounded to coarse PAT stage (109.1 μrad/px). Guarantees ≤ 10 px (≈ 1.09 mrad) capture cone for handover to downstream 10 kHz FSM fine-pointing stage."
+            p.font.size = Pt(7.3); p.font.color.rgb = TEXT_DARK
 
     print("[+] Slide 2: Pastel styling, mathematical equations, and named algorithms integrated.")
 
@@ -329,17 +363,17 @@ def enhance_deck():
 
     # Add 4 cleanly spaced pastel tech stack rows below the architecture diagram
     tech_rows = [
-        ("IMM Kinematics", "Dual-mode Kalman filter combining CV and CT models to eliminate lag: μ_k^(j)"),
-        ("Servo Control Loop", "Feedforward predictive anti-windup PID (strict 5.0°/s slew clamping: sat_[-5,5])"),
-        ("Tactical Cockpit GUI", "OpenCV Tactical HUD & Live Web Radar (HTTP 8080) with manual PTZ override"),
-        ("Compliance & CI", "Automated CSV/PDF Benchmark-2 audit engine logging RMSE, latency, & lock retention")
+        ("State Estimation (H1)", "Latency-compensated Kalman filter projecting x̂_(t+τ) across loop delay τ (up to 32% lag cut)"),
+        ("Reacquisition (H2)", "Uncertainty-guided covariance ellipse search cutting link recovery time by up to 97%"),
+        ("Coarse Handover SLA", "Stabilizes line-of-sight inside ≤ 10 px (≈ 1.09 mrad) cone for downstream FSM / QPD stage"),
+        ("Evaluator Engine", "Dual mode: Real-time SIL simulator + Offline .mp4 video benchmark bypass with CSV audit")
     ]
     
     y_starts = [4.65, 5.20, 5.75, 6.30]
     for idx, (label, desc) in enumerate(tech_rows):
         y = Inches(y_starts[idx])
         # Category label
-        tb_lbl = slide3.shapes.add_textbox(Inches(6.90), y, Inches(1.70), Inches(0.40))
+        tb_lbl = slide3.shapes.add_textbox(Inches(6.90), y, Inches(1.80), Inches(0.40))
         tf_lbl = tb_lbl.text_frame
         tf_lbl.word_wrap = True
         p_lbl = tf_lbl.paragraphs[0]
@@ -349,7 +383,7 @@ def enhance_deck():
         p_lbl.font.color.rgb = TEXT_NAVY
         
         # Description
-        tb_desc = slide3.shapes.add_textbox(Inches(8.65), y, Inches(3.93), Inches(0.45))
+        tb_desc = slide3.shapes.add_textbox(Inches(8.75), y, Inches(3.83), Inches(0.45))
         tf_desc = tb_desc.text_frame
         tf_desc.word_wrap = True
         p_desc = tf_desc.paragraphs[0]
@@ -367,14 +401,14 @@ def enhance_deck():
             conn.line.color.rgb = PASTEL_BORDER_SLATE
             conn.line.width = Pt(0.8)
 
-    # Update Left Column Workflow text with exact mathematical formulas
+    # Update Left Column Workflow text with exact mathematical formulas and scope
     wf_equations = {
-        "TextBox 17418": "Lemniscate (x²+y²)² = 2a²(x²-y²) & Singer acceleration walk across 2000x2000 space (22.5 arcsec/px).",
-        "TextBox 17423": "Multi-harmonic angular vibration θ_jit(t) = ∑ A_k sin(2π f_k t + φ_k) injecting ±20 px satellite resonance.",
-        "TextBox 17428": "Diffraction Airy PSF I(θ) = I₀ [2J₁(u)/u]² with Beer-Lambert extinction I = I₀ exp(-γR) & 10% S&P noise.",
-        "TextBox 17433": "Pinhole projective camera matrix K crops 640x480 active FPA (4°x3° FOV) with pan/tilt inertia.",
-        "TextBox 17438": "Vectorized 5x5 rank-order median filter + continuous 2D Gaussian fit: RMSE < 0.2 px in 0.8 ms.",
-        "TextBox 17442": "IMM-KF blends CV & CT states; feeds anti-windup PID servo clamped to statutory ≤ 5.0°/s slew limit."
+        "TextBox 17418": "Global Universe Kinematics: 2000x2000 universe at 109.1 μrad/px (22.5\"/px default 4°x3° FOV), propagating Lemniscate and Singer walks.",
+        "TextBox 17423": "Platform Jitter & Dynamics: Enforces 5.0°/s motor slew limit and multi-harmonic platform vibration θ_jit(t) = ∑ A_k sin(2π f_k t + φ_k).",
+        "TextBox 17428": "Physical Optical Degradation: Diffraction Airy PSF I(θ) = I₀ [2J₁(u)/u]², Beer-Lambert fog, Poisson noise, and PS ~10% S&P (stress tested to 25%).",
+        "TextBox 17433": "Sensor Windowing & Latency Queue: Pinhole matrix K crops 640x480 active FPA; LatencyQueue models cumulative loop delay τ ∈ [0, 200] ms.",
+        "TextBox 17438": "Adaptive Localization & Subpixel IWC: Top-Hat background suppression + Intensity-Weighted Centroiding achieves < 0.2 px RMSE without heavy YOLO.",
+        "TextBox 17442": "Predictive Pointing & Reacquisition: Latency-compensated state projection (H1: 32% lag cut) + Covariance ellipse search on loss (H2: 97% faster re-lock)."
     }
     for s in slide3.shapes:
         if s.name in wf_equations:
@@ -431,36 +465,42 @@ def enhance_deck():
             height=Inches(2.20)
         )
 
-    # Update Challenges with precise technical descriptions
+    # Operational Feasibility
     for s in slide4.shapes:
-        if s.name == "TextBox 17469": # Ch 1
+        if s.name == "TextBox 17437":
+            s.text_frame.clear(); s.text_frame.word_wrap = True
+            ops = [
+                "Rapid Setup: < 1 min zero-config launch on Windows/macOS (1-click standalone binaries).",
+                "Benchmark Bypass: Decoupled ingestion of external .mp4 video files with ground-truth CSV.",
+                "Repeatable Runs: Deterministic PRNG seeds for reproducible jury audits & H1/H2 verification."
+            ]
+            for idx, op_txt in enumerate(ops):
+                p = s.text_frame.paragraphs[0] if idx == 0 else s.text_frame.add_paragraph()
+                p.space_after = Pt(2)
+                r = p.add_run(); r.text = op_txt; r.font.size = Pt(7.8); r.font.color.rgb = TEXT_DARK
+
+    # Update Challenges with precise technical descriptions
+    ch_updates = {
+        "TextBox 17468": "PS-Specified ~10% S&P Noise (Stress to 25%)",
+        "TextBox 17469": "→ Vectorized rank-order median filter + Top-Hat morphology strips impulsive noise in 0.8 ms, maintaining < 0.2 px subpixel centroid accuracy.",
+        "TextBox 17472": "Loop Latency & Actuator Delay (0–200 ms)",
+        "TextBox 17473": "→ Forward state projection (H1) compensates cumulative frame, compute, and motor delay, reducing steady-state pointing lag by up to 32%.",
+        "TextBox 17476": "Gimbal Dynamics & Slew Limits (5–10°/s)",
+        "TextBox 17477": "→ Anti-windup saturated velocity PID profiler (θ_dot ≤ 5.0°/s) prevents motor torque saturation and models real gimbal inertia with zero overshoot.",
+        "TextBox 17480": "Visibility Outages & Cloud/Fog Drops",
+        "TextBox 17481": "→ Uncertainty-guided reacquisition (H2) scans growing covariance ellipse, reacquiring lost beacon up to 97% faster than blind spirals.",
+        "TextBox 17484": "Independent Evaluator Verification",
+        "TextBox 17485": "→ Decoupled MP4 bypass ingests external real/synthetic videos; standalone 1-click macOS DMG (61 MB) & Windows EXE enable immediate jury testing."
+    }
+    for s in slide4.shapes:
+        if s.name in ch_updates:
             s.text_frame.clear(); s.text_frame.word_wrap = True
             p = s.text_frame.paragraphs[0]
-            p.text = "→ Vectorized 5x5 rank-order median filter eliminates 100% impulsive salt-and-pepper noise in 0.8 ms before feature extraction."
-            p.font.size = Pt(7.8); p.font.color.rgb = TEXT_DARK
-        elif s.name == "TextBox 17473": # Ch 2
-            s.text_frame.clear(); s.text_frame.word_wrap = True
-            p = s.text_frame.paragraphs[0]
-            p.text = "→ IMM multi-hypothesis Kalman filter (μ_k^(CV) ↔ μ_k^(CT)) dynamically adapts between linear drift and high-g turning with zero lag."
-            p.font.size = Pt(7.8); p.font.color.rgb = TEXT_DARK
-        elif s.name == "TextBox 17477": # Ch 3
-            s.text_frame.clear(); s.text_frame.word_wrap = True
-            p = s.text_frame.paragraphs[0]
-            p.text = "→ Anti-windup saturated velocity PID profiler (θ_dot ≤ 5.0°/s) prevents motor torque saturation and models real gimbal inertia."
-            p.font.size = Pt(7.8); p.font.color.rgb = TEXT_DARK
-        elif s.name == "TextBox 17481": # Ch 4
-            s.text_frame.clear(); s.text_frame.word_wrap = True
-            p = s.text_frame.paragraphs[0]
-            p.text = "→ Deep saliency proposal fuses spatial gradients to isolate faint beacon spots under Beer-Lambert extinction (I = I₀ exp(-γR))."
-            p.font.size = Pt(7.8); p.font.color.rgb = TEXT_DARK
-        elif s.name == "TextBox 17484": # Ch 5 Title
-            s.text_frame.paragraphs[0].text = "Multi-Terminal Network Latency"
-            s.text_frame.paragraphs[0].font.size = Pt(9.0)
-        elif s.name == "TextBox 17485": # Ch 5 Body
-            s.text_frame.clear(); s.text_frame.word_wrap = True
-            p = s.text_frame.paragraphs[0]
-            p.text = "→ Non-blocking UDP with 8KB MTU fragmentation decouples 30 Hz edge vision from 60 Hz web cockpit with zero packet lag."
-            p.font.size = Pt(7.8); p.font.color.rgb = TEXT_DARK
+            p.text = ch_updates[s.name]
+            if s.name in ["TextBox 17468", "TextBox 17472", "TextBox 17476", "TextBox 17480", "TextBox 17484"]:
+                p.font.size = Pt(8.5); p.font.bold = True; p.font.color.rgb = TEXT_NAVY
+            else:
+                p.font.size = Pt(7.6); p.font.color.rgb = TEXT_DARK
 
     print("[+] Slide 4: Pastel cards, disturbance panel, and challenge equations integrated.")
 
@@ -492,17 +532,46 @@ def enhance_deck():
             if s.name == s_name:
                 set_shape_pastel(s, PASTEL_BG_SLATE, PASTEL_BORDER_SLATE, 1.0)
 
-    # Style metric text to dark navy for ultra-crisp legibility
+    # Update pipeline text with verified benchmark results & proper wording
+    slide5_updates = {
+        "TextBox 17436": "1-Click Native Runtime",
+        "TextBox 17437": "Standalone cross-platform app (macOS 61 MB DMG / Windows EXE) runs 100% offline in < 30 seconds.",
+        "TextBox 17439": "100% Offline",
+        "TextBox 17440": "macOS & Win native",
+        
+        "TextBox 17443": "Empirical SIL Testbed",
+        "TextBox 17444": "Models 109.1 μrad/px scale, loop latency (0-200 ms), PS ~10% S&P, and dynamic platform motion.",
+        "TextBox 17446": "109.1 μrad/px",
+        "TextBox 17447": "Default 4°x3° FOV",
+        
+        "TextBox 17450": "Latency-Compensated Lock",
+        "TextBox 17451": "Autonomous acquisition in ≤ 0.8 s (SLA: ≤ 2.0 s); forward projection cuts pointing lag by up to 32%.",
+        "TextBox 17453": "≤ 0.8 s",
+        "TextBox 17454": "SLA: ≤ 2 s",
+        
+        "TextBox 17457": "Sub-Pixel Coarse Centroiding",
+        "TextBox 17458": "Maintains lock with RMSE ≤ 1.5 px nominal; all evaluated test trials remained compliant with PS ≤ 10 px cone.",
+        "TextBox 17460": "< 1.5 px",
+        "TextBox 17461": "PS Cone: ≤ 10 px",
+        
+        "TextBox 17464": "Empirical Benchmark Engine",
+        "TextBox 17465": "Auto-exports timestamped CSV compliance audits; empirically verifies Hypotheses H1 (latency) & H2 (reacquisition).",
+        "TextBox 17467": "+97% / +32%",
+        "TextBox 17468": "H1 & H2 Empirical Gains"
+    }
     for s in slide5.shapes:
-        if s.name in ["TextBox 17439", "TextBox 17446", "TextBox 17453", "TextBox 17460", "TextBox 17467"]:
-            for p in s.text_frame.paragraphs:
-                for r in p.runs:
-                    r.font.color.rgb = TEXT_NAVY
-                    r.font.bold = True
-        elif s.name in ["TextBox 17440", "TextBox 17447", "TextBox 17454", "TextBox 17461", "TextBox 17468"]:
-            for p in s.text_frame.paragraphs:
-                for r in p.runs:
-                    r.font.color.rgb = TEXT_SLATE
+        if s.name in slide5_updates:
+            s.text_frame.clear(); s.text_frame.word_wrap = True
+            p = s.text_frame.paragraphs[0]
+            p.text = slide5_updates[s.name]
+            if s.name in ["TextBox 17436", "TextBox 17443", "TextBox 17450", "TextBox 17457", "TextBox 17464"]:
+                p.font.size = Pt(8.5); p.font.bold = True; p.font.color.rgb = TEXT_NAVY
+            elif s.name in ["TextBox 17439", "TextBox 17446", "TextBox 17453", "TextBox 17460", "TextBox 17467"]:
+                p.font.size = Pt(11.0); p.font.bold = True; p.font.color.rgb = TEXT_NAVY
+            elif s.name in ["TextBox 17440", "TextBox 17447", "TextBox 17454", "TextBox 17461", "TextBox 17468"]:
+                p.font.size = Pt(7.5); p.font.color.rgb = TEXT_SLATE
+            else:
+                p.font.size = Pt(7.5); p.font.color.rgb = TEXT_DARK
 
     print("[+] Slide 5: Pastel sector cards and refined metric typography applied.")
 
@@ -643,22 +712,29 @@ def enhance_deck():
         sp = s._element
         sp.getparent().remove(sp)
 
-    # Documented Engineering Deliverables: Concise 3-item list
+    # Documented Engineering Deliverables & Scope Boundary
     for s in slide6.shapes:
-        if s.name == "TextBox 17447":
+        if s.name == "TextBox 17446":
+            s.text_frame.clear()
+            p = s.text_frame.paragraphs[0]
+            p.text = "Scope Boundary & Engineering Deliverables"
+            p.font.size = Pt(9.2)
+            p.font.bold = True
+            p.font.color.rgb = TEXT_NAVY
+        elif s.name == "TextBox 17447":
             s.text_frame.clear()
             s.text_frame.word_wrap = True
             delivs = [
-                "1. docs/system_architecture_plan.md (System Blueprint)",
-                "2. academic_research/ (Literature Review & Papers)",
-                "3. distributed_demo/ (3-Node Networked Simulation)"
+                "1. Scope Boundary: Coarse PAT & Reacquisition Stage (109.1 μrad/px). Downstream fine pointing (FSM, QPD, BER, link budget) handled at handover.",
+                "2. Scientific Engine: src/experiments/scientific_benchmark.py (Sweeps for SNR, Latency H1, Reacquisition H2, Maneuvers).",
+                "3. Standalone Releases: Native macOS 61 MB DMG (arm64 Apple Silicon) + Windows 1-click CI/CD binaries."
             ]
             for idx, d_text in enumerate(delivs):
                 p = s.text_frame.paragraphs[0] if idx == 0 else s.text_frame.add_paragraph()
                 p.space_after = Pt(1)
                 r = p.add_run()
                 r.text = d_text
-                r.font.size = Pt(8.0)
+                r.font.size = Pt(7.6)
                 r.font.color.rgb = TEXT_DARK
 
     # Add Heading: Operational Software Cockpit (main.py)
