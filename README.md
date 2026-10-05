@@ -170,6 +170,7 @@ python3 -m unittest discover tests
 │   └── ground_tracker.py                      # Node C: Autonomous PTZ Ground Optical Station (Port 9998)
 │
 ├── docs/                                      # Research Specifications & Viva Manuals
+│   ├── SIH_PORTAL_SUBMISSION_DOSSIER.md       # Complete portal copy-paste dossier (all fields & counts)
 │   ├── PHOENIX_X_RESEARCH_SPECIFICATION_V1.md # Formal 6-section research specification
 │   ├── RESEARCH_FRAMEWORK_AND_VIVA_GUIDE.md   # 14-point evaluator viva attack matrix & pitch
 │   ├── system_architecture_plan.md            # Hardware-to-software PAT mapping
