@@ -7,7 +7,7 @@
 [![Python Version](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)]()
 [![Build & Release](https://github.com/jvstin47/Phoenix-X-AI-Based-Virtual-Camera-Tracking-System-SIH26169/actions/workflows/build_binaries.yml/badge.svg)](https://github.com/jvstin47/Phoenix-X-AI-Based-Virtual-Camera-Tracking-System-SIH26169/actions)
-[![Unit Tests](https://img.shields.io/badge/Unit%20Tests-19%2F19%20Passing-brightgreen.svg)]()
+[![Unit Tests](https://img.shields.io/badge/Unit%20Tests-20%2F20%20Passing-brightgreen.svg)]()
 
 ---
 
@@ -175,10 +175,13 @@ python3 -m unittest discover tests
 │   ├── system_architecture_plan.md            # Hardware-to-software PAT mapping
 │   ├── technical_report.md                    # In-depth mathematical formulations
 │   ├── user_manual.md                         # Detailed operator cockpit guide
+│   ├── presentation_video_script_6_speakers.md # 6-Speaker 7.5-min technical presentation script
+│   ├── video_pitch_script.md                  # 3-Minute executive video storyboard
 │   ├── ISRO_SAC_Problem_Statement_26169.pdf   # Official ISRO / SAC Problem Statement
 │   └── references/                            # Academic proposals & background literature
 │
 ├── presentation/                              # Verified 6-Slide Presentation Decks
+│   ├── Phoenix_X_SIH26169_Redesign.pptx       # Active redesigned master presentation deck
 │   ├── Phoenix_X_SIH26169_Final.pptx          # Final submission deck
 │   ├── Phoenix_X_SIH26169_Improved.pptx       # Enhanced graphical presentation
 │   ├── Phoenix_X_SIH26169_Submission.pptx     # Base submission deck

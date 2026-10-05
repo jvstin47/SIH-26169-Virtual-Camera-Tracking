@@ -35,6 +35,9 @@ Phoenix-X provides 3 primary operational modes tailored to different evaluation 
 Launches the real-time simulation universe, optical degradation engine, and AI tracker in an interactive OpenCV HUD.
 ```bash
 python3 main.py
+
+# Or launch directly with high-contrast light HUD:
+python3 main.py --light-mode
 ```
 
 #### Keyboard Hotkeys & Real-Time Controls:
@@ -46,6 +49,7 @@ python3 main.py
 | **`4`** | **Toggle Platform Jitter** | Injects $\pm 20\text{ px/frame}$ multi-harmonic vibration ($17.3\text{ Hz}$ & $29.1\text{ Hz}$). |
 | **`T`** | **Cycle Target Trajectory** | Transitions path: Figure-8 $\rightarrow$ Circular $\rightarrow$ Sinusoid $\rightarrow$ Random Walk $\rightarrow$ Linear. |
 | **`R`** | **Re-Center Gimbal Camera** | Slew camera back to global universe origin $(1000, 1000)$. |
+| **`L`** | **Toggle Light / Dark HUD** | Switches the tactical cockpit between stealth dark HUD and high-contrast light HUD. |
 | **`Q`** or **`ESC`** | **Quit & Export Report** | Terminates session and writes timestamped compliance CSV to `output_reports/`. |
 
 ---
