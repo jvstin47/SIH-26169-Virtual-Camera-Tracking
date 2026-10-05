@@ -9,6 +9,20 @@
   <style>
     body { background-color: #0b0f17; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     .cockpit-card { background: #131b26; border: 1px solid #233143; border-radius: 8px; }
+
+    /* Light theme overrides */
+    body.light-theme { background-color: #f1f5f9; color: #0f172a; }
+    body.light-theme .cockpit-card { background: #ffffff; border-color: #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    body.light-theme .text-white { color: #0f172a !important; }
+    body.light-theme .text-gray-400 { color: #475569 !important; }
+    body.light-theme .text-gray-500 { color: #64748b !important; }
+    body.light-theme .bg-black { background-color: #f8fafc !important; }
+    body.light-theme .bg-\[\#0e141e\] { background-color: #f8fafc !important; border-color: #cbd5e1 !important; }
+    body.light-theme .border-gray-800, body.light-theme .border-gray-700 { border-color: #cbd5e1 !important; }
+    body.light-theme .bg-gray-800 { background-color: #e2e8f0 !important; color: #1e293b !important; }
+    body.light-theme .bg-sky-950 { background-color: #e0f2fe !important; color: #0369a1 !important; }
+    body.light-theme .bg-indigo-950 { background-color: #e0e7ff !important; color: #4338ca !important; }
+    body.light-theme .bg-emerald-950 { background-color: #d1fae5 !important; color: #047857 !important; }
   </style>
 </head>
 <body class="p-4 select-none">
@@ -18,6 +32,10 @@
       <span class="px-2.5 py-1 text-xs font-bold rounded bg-sky-950 text-sky-400 border border-sky-800">DISTRIBUTED TELEMETRY LINK</span>
       <h1 class="text-lg font-bold text-white tracking-wide">PHOENIX-X: LIVE MISSION CONTROL COCKPIT</h1>
     </div>
+    <div class="flex items-center gap-2">
+      <button id="btn-theme-toggle" onclick="toggleTheme()" class="text-xs px-2.5 py-1 rounded bg-gray-800 text-amber-400 border border-gray-700 hover:bg-gray-700 transition flex items-center gap-1" title="Toggle Light / Dark Mode (Hotkey: L)">
+        <span id="theme-icon">☀️</span> <span id="theme-text">Light Mode</span>
+      </button>
       <a href="unified.html" class="text-xs px-2.5 py-1 rounded bg-sky-950 text-sky-300 border border-sky-800 hover:bg-sky-900 transition flex items-center gap-1">
         <span>🎛️</span> Master Cockpit
       </a>
@@ -326,6 +344,43 @@
       ctx.arc(cx, cy, 10, 0, 2 * Math.PI);
       ctx.stroke();
     }
+
+    // --- Theme Management ---
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle('light-theme');
+      localStorage.setItem('phoenix_theme', isLight ? 'light' : 'dark');
+      updateThemeUI(isLight);
+    }
+
+    function updateThemeUI(isLight) {
+      const icon = document.getElementById('theme-icon');
+      const text = document.getElementById('theme-text');
+      const btn = document.getElementById('btn-theme-toggle');
+      if (icon && text) {
+        if (isLight) {
+          icon.textContent = '🌙';
+          text.textContent = 'Dark Mode';
+          if (btn) btn.className = 'text-xs px-2.5 py-1 rounded bg-slate-200 text-slate-800 border border-slate-300 hover:bg-slate-300 transition flex items-center gap-1';
+        } else {
+          icon.textContent = '☀️';
+          text.textContent = 'Light Mode';
+          if (btn) btn.className = 'text-xs px-2.5 py-1 rounded bg-gray-800 text-amber-400 border border-gray-700 hover:bg-gray-700 transition flex items-center gap-1';
+        }
+      }
+    }
+
+    const savedTheme = localStorage.getItem('phoenix_theme');
+    if (savedTheme === 'light' || (!savedTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+      document.body.classList.add('light-theme');
+      updateThemeUI(true);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 'l' || e.key === 'L' || e.key === 't' || e.key === 'T') {
+        toggleTheme();
+      }
+    });
 
     pollTelemetry();
   </script>

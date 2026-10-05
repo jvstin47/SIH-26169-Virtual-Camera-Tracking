@@ -31,8 +31,9 @@ from src.vision.tracker import BeaconTracker
 from src.control.gimbal_controller import GimbalController
 
 class PhoenixXSimulator:
-    def __init__(self, headless: bool = False):
+    def __init__(self, headless: bool = False, light_mode: bool = False):
         self.headless = headless
+        self.light_mode = light_mode
         
         # Subsystems
         self.trajectory = TrajectoryGenerator(mode="figure_8", speed=1.0)
@@ -63,8 +64,9 @@ class PhoenixXSimulator:
         print("  [2] Toggle Poisson & Gaussian Sensor Noise")
         print("  [3] Toggle Heavy Fog / Atmospheric Attenuation")
         print("  [4] Toggle Platform Multi-Harmonic Jitter (±20 px)")
-        print("  [T] Cycle Target Trajectory (Figure-8 / Circle / Sinusoid / Random)")
-        print("  [R] Reset Camera Position to Center")
+        print("  [T] Cycle Target Trajectory (Figure-8 / Circular / Sinusoidal / etc.)")
+        print("  [R] Reset Gimbal Pointing to Center")
+        print("  [L] Toggle Light / Dark Cockpit Theme")
         print("  [Q] or [ESC] Quit and Export CSV Performance Audit Log\n")
 
         fps_timer = time.time()
@@ -181,6 +183,9 @@ class PhoenixXSimulator:
                     self.camera.y = UNIVERSE_HEIGHT_PX / 2.0
                     self.controller.reset()
                     print("[*] Camera Reset to Center.")
+                elif key == ord('l') or key == ord('L'):
+                    self.light_mode = not self.light_mode
+                    print(f"[*] Visual Theme Switched to: {'LIGHT MODE (Engineering HUD)' if self.light_mode else 'DARK MODE (Tactical Deep Space)'}")
 
             # Frame rate pacing to nominal ~30-40 Hz
             t_elapsed = time.time() - t_start
@@ -194,10 +199,54 @@ class PhoenixXSimulator:
 
     def _render_cockpit(self, camera_frame, local_target, detected_point,
                         error_px, error_arcsec, slew_rate, fps, snr_db, trail, sim_time):
-        """Builds a high-resolution, dark-themed tactical dual-viewport cockpit."""
+        """Builds a high-resolution, dual-theme tactical dual-viewport cockpit."""
+        # Theme color definitions
+        if self.light_mode:
+            bg_canvas = (244, 247, 252)         # Soft slate white
+            bg_minimap = (235, 240, 248)        # Pale ice minimap
+            border_viewport = (195, 205, 220)   # Clean slate border
+            grid_minor_col = (220, 226, 236)    # Subtle grey grid
+            grid_major_col = (190, 202, 218)    # Distinct grey grid
+            grid_ring_col = (205, 215, 230)     # Pale ring
+            axis_ticks_col = (100, 115, 135)    # Slate ticks
+            crosshair_cam = (140, 140, 140)     # Visible crosshair
+            crosshair_radius_col = (160, 160, 160)
+            text_title = (20, 35, 55)           # Deep Space Navy
+            text_subtitle = (180, 95, 0)        # Deep Azure
+            text_label = (70, 85, 105)          # Muted Slate
+            text_val = (15, 25, 40)             # Charcoal Black
+            fov_box_col = (210, 110, 0)         # Royal Blue
+            trail_col = (160, 50, 90)           # Deep Indigo
+            target_spot_col = (0, 130, 255)     # Deep Amber/Orange
+            btn_off_bg = (225, 230, 240)        # Inactive button BG
+            btn_off_txt = (90, 105, 125)        # Inactive button text
+            btn_on_bg = (200, 240, 210)         # Soft Mint Green
+            btn_on_txt = (15, 80, 30)           # Active button text
+        else:
+            bg_canvas = (20, 24, 30)            # Dark Space Slate
+            bg_minimap = (8, 12, 18)            # Deep Black Minimap
+            border_viewport = (60, 70, 85)      # Slate Border
+            grid_minor_col = (22, 32, 45)       # Faint Grid
+            grid_major_col = (40, 58, 80)       # Major Grid
+            grid_ring_col = (28, 42, 60)        # Range Ring
+            axis_ticks_col = (80, 105, 135)     # Dim Ticks
+            crosshair_cam = (80, 80, 80)        # Dim Crosshair
+            crosshair_radius_col = (100, 100, 100)
+            text_title = (220, 225, 235)        # Crisp White
+            text_subtitle = (0, 190, 255)       # Bright Cyan/Amber
+            text_label = (160, 170, 185)        # Slate Grey
+            text_val = (200, 205, 215)          # Light Grey
+            fov_box_col = (0, 180, 255)         # Bright Amber
+            trail_col = (100, 70, 200)          # Purple Trail
+            target_spot_col = (0, 255, 255)     # Bright Yellow
+            btn_off_bg = (30, 35, 45)           # Inactive button BG
+            btn_off_txt = (160, 160, 160)       # Inactive button text
+            btn_on_bg = (0, 230, 115)           # Neon Green
+            btn_on_txt = (0, 0, 0)              # Active button text
+
         # Canvas dimensions: 1100 x 640
         canvas = np.zeros((640, 1100, 3), dtype=np.uint8)
-        canvas[:] = (20, 24, 30)  # Dark space slate background
+        canvas[:] = bg_canvas
         
         # -------------------------------------------------------------
         # Viewport 1: Active 640x480 Camera View (Right Side)
@@ -207,23 +256,23 @@ class PhoenixXSimulator:
         cy = int(CAMERA_HEIGHT_PX / 2)
         
         # Draw central optical crosshairs
-        cv2.line(cam_bgr, (cx - 20, cy), (cx + 20, cy), (80, 80, 80), 1)
-        cv2.line(cam_bgr, (cx, cy - 20), (cx, cy + 20), (80, 80, 80), 1)
-        cv2.circle(cam_bgr, (cx, cy), 10, (100, 100, 100), 1) # 10 px PS threshold radius
+        cv2.line(cam_bgr, (cx - 20, cy), (cx + 20, cy), crosshair_cam, 1)
+        cv2.line(cam_bgr, (cx, cy - 20), (cx, cy + 20), crosshair_cam, 1)
+        cv2.circle(cam_bgr, (cx, cy), 10, crosshair_radius_col, 1) # 10 px PS threshold radius
         
         # Draw detected beacon reticle
         if detected_point:
             dx = int(round(detected_point.x))
             dy = int(round(detected_point.y))
-            # Green tracking lock box
-            lock_color = (0, 230, 115) if error_px <= 10.0 else (0, 165, 255)
+            # Tracking lock box
+            lock_color = (0, 200, 90) if error_px <= 10.0 else (0, 140, 255)
             cv2.rectangle(cam_bgr, (dx - 12, dy - 12), (dx + 12, dy + 12), lock_color, 1)
-            cv2.circle(cam_bgr, (dx, dy), 2, (0, 255, 255), -1)
+            cv2.circle(cam_bgr, (dx, dy), 2, (0, 255, 255) if not self.light_mode else (220, 100, 0), -1)
             # Line connecting centroid to center
             cv2.line(cam_bgr, (cx, cy), (dx, dy), (0, 140, 255), 1)
             
         # Border around camera view
-        cv2.rectangle(cam_bgr, (0, 0), (CAMERA_WIDTH_PX - 1, CAMERA_HEIGHT_PX - 1), (60, 70, 85), 2)
+        cv2.rectangle(cam_bgr, (0, 0), (CAMERA_WIDTH_PX - 1, CAMERA_HEIGHT_PX - 1), border_viewport, 2)
         canvas[40:520, 430:1070] = cam_bgr
         
         # -------------------------------------------------------------
@@ -232,58 +281,58 @@ class PhoenixXSimulator:
         minimap_size = 360
         scale = minimap_size / float(UNIVERSE_WIDTH_PX)
         minimap = np.zeros((minimap_size, minimap_size, 3), dtype=np.uint8)
-        minimap[:] = (8, 12, 18)
+        minimap[:] = bg_minimap
         
-        # Draw Minor Grid Lines (every 250 px in universe = 45 px on minimap)
+        # Draw Minor Grid Lines
         for g in range(0, minimap_size, int(250 * scale)):
-            cv2.line(minimap, (g, 0), (g, minimap_size), (22, 32, 45), 1)
-            cv2.line(minimap, (0, g), (minimap_size, g), (22, 32, 45), 1)
+            cv2.line(minimap, (g, 0), (g, minimap_size), grid_minor_col, 1)
+            cv2.line(minimap, (0, g), (minimap_size, g), grid_minor_col, 1)
 
-        # Draw Major Grid Lines (every 500 px in universe = 90 px on minimap)
+        # Draw Major Grid Lines
         for g in range(0, minimap_size + 1, int(500 * scale)):
-            cv2.line(minimap, (g, 0), (g, minimap_size), (40, 58, 80), 1)
-            cv2.line(minimap, (0, g), (minimap_size, g), (40, 58, 80), 1)
+            cv2.line(minimap, (g, 0), (g, minimap_size), grid_major_col, 1)
+            cv2.line(minimap, (0, g), (minimap_size, g), grid_major_col, 1)
 
-        # Draw Range Rings from Center (radius: 250, 500, 750 px in universe)
+        # Draw Range Rings from Center
         center_m = (int(minimap_size / 2), int(minimap_size / 2))
         for r_ring in [250, 500, 750]:
-            cv2.circle(minimap, center_m, int(r_ring * scale), (28, 42, 60), 1)
+            cv2.circle(minimap, center_m, int(r_ring * scale), grid_ring_col, 1)
 
         # Center Crosshair
         cx_m, cy_m = center_m
-        cv2.line(minimap, (cx_m - 8, cy_m), (cx_m + 8, cy_m), (0, 180, 255), 1)
-        cv2.line(minimap, (cx_m, cy_m - 8), (cx_m, cy_m + 8), (0, 180, 255), 1)
+        cv2.line(minimap, (cx_m - 8, cy_m), (cx_m + 8, cy_m), fov_box_col, 1)
+        cv2.line(minimap, (cx_m, cy_m - 8), (cx_m, cy_m + 8), fov_box_col, 1)
 
         # Coordinate Axis Ticks
         for px_val in [500, 1000, 1500]:
             g_pos = int(px_val * scale)
             cv2.putText(minimap, str(px_val), (g_pos - 10, minimap_size - 4),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.28, (80, 105, 135), 1)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.28, axis_ticks_col, 1)
             cv2.putText(minimap, str(px_val), (3, g_pos + 4),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.28, (80, 105, 135), 1)
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.28, axis_ticks_col, 1)
             
         # Draw trajectory trail
         for p1, p2 in zip(trail[:-1], trail[1:]):
             m1 = (int(p1[0] * scale), int(p1[1] * scale))
             m2 = (int(p2[0] * scale), int(p2[1] * scale))
-            cv2.line(minimap, m1, m2, (100, 70, 200), 1)
+            cv2.line(minimap, m1, m2, trail_col, 1)
             
         # Draw camera FOV box in universe
         cam_top_left = (int((self.camera.x - CAMERA_WIDTH_PX/2) * scale),
                         int((self.camera.y - CAMERA_HEIGHT_PX/2) * scale))
         cam_bot_right = (int((self.camera.x + CAMERA_WIDTH_PX/2) * scale),
                          int((self.camera.y + CAMERA_HEIGHT_PX/2) * scale))
-        cv2.rectangle(minimap, cam_top_left, cam_bot_right, (0, 180, 255), 2)
+        cv2.rectangle(minimap, cam_top_left, cam_bot_right, fov_box_col, 2)
         cv2.putText(minimap, "FOV", (cam_top_left[0] + 3, max(12, cam_top_left[1] - 3)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.28, (0, 180, 255), 1)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.28, fov_box_col, 1)
         
         # Draw true target spot on minimap
         if trail:
             cur_tgt = (int(trail[-1][0] * scale), int(trail[-1][1] * scale))
-            cv2.circle(minimap, cur_tgt, 5, (0, 255, 255), -1)
-            cv2.circle(minimap, cur_tgt, 9, (0, 200, 255), 1)
+            cv2.circle(minimap, cur_tgt, 5, target_spot_col, -1)
+            cv2.circle(minimap, cur_tgt, 9, target_spot_col, 1)
             
-        cv2.rectangle(minimap, (0, 0), (minimap_size - 1, minimap_size - 1), (70, 95, 125), 1)
+        cv2.rectangle(minimap, (0, 0), (minimap_size - 1, minimap_size - 1), border_viewport, 1)
         canvas[40:400, 30:390] = minimap
 
         # -------------------------------------------------------------
@@ -291,47 +340,46 @@ class PhoenixXSimulator:
         # -------------------------------------------------------------
         # Title Header
         cv2.putText(canvas, "PHOENIX-X // FSOC VIRTUAL CAMERA TRACKING SYSTEM", (30, 25),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (220, 225, 235), 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, text_title, 2)
         cv2.putText(canvas, "ISRO SAC - PROBLEM STATEMENT 26169", (730, 25),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.48, (0, 190, 255), 1)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.48, text_subtitle, 1)
 
         # Minimap Label
         cv2.putText(canvas, "GLOBAL UNIVERSE (2000x2000)", (30, 420),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, (160, 170, 185), 1)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.45, text_label, 1)
         # Camera Label
         status_txt = "LOCK ACQUIRED" if (detected_point and error_px <= 10.0) else "ACQUIRING..."
-        status_col = (0, 230, 115) if (detected_point and error_px <= 10.0) else (0, 165, 255)
+        status_col = (0, 180, 75) if (detected_point and error_px <= 10.0) else (0, 140, 255)
         cv2.putText(canvas, f"ACTIVE CAMERA FPA (640x480) - {status_txt}", (430, 540),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.48, status_col, 1)
 
         # Telemetry Block (Bottom Left)
         ty = 445
-        cv2.putText(canvas, f"TRAJECTORY : {self.trajectory.mode.upper()}", (30, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 205, 215), 1)
-        cv2.putText(canvas, f"CENTROID ERR: {error_px:5.2f} px ({error_arcsec:5.1f}\")", (30, ty + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 255, 255), 1)
+        cv2.putText(canvas, f"TRAJECTORY : {self.trajectory.mode.upper()}", (30, ty), cv2.FONT_HERSHEY_SIMPLEX, 0.42, text_val, 1)
+        cv2.putText(canvas, f"CENTROID ERR: {error_px:5.2f} px ({error_arcsec:5.1f}\")", (30, ty + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 160, 220) if self.light_mode else (0, 255, 255), 1)
         cv2.putText(canvas, f"PS REQ (<=10): <= 10.0 px (COMPLIANT)" if error_px <= 10.0 else "PS REQ (<=10): <= 10.0 px (ALIGNING)", (30, ty + 40),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 230, 115) if error_px <= 10.0 else (0, 165, 255), 1)
-        cv2.putText(canvas, f"SLEW RATE   : {slew_rate:4.2f} deg/s (Limit: 5.0)", (30, ty + 60), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 205, 215), 1)
-        cv2.putText(canvas, f"THROUGHPUT  : {fps:4.1f} FPS (Target: >= 30)", (30, ty + 80), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 230, 115), 1)
-        cv2.putText(canvas, f"SNR (dB)    : {snr_db:4.1f} dB", (30, ty + 100), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (200, 205, 215), 1)
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 160, 60) if error_px <= 10.0 else (0, 140, 255), 1)
+        cv2.putText(canvas, f"SLEW RATE   : {slew_rate:4.2f} deg/s (Limit: 5.0)", (30, ty + 60), cv2.FONT_HERSHEY_SIMPLEX, 0.42, text_val, 1)
+        cv2.putText(canvas, f"THROUGHPUT  : {fps:4.1f} FPS (Target: >= 30)", (30, ty + 80), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 160, 60), 1)
+        cv2.putText(canvas, f"SNR (dB)    : {snr_db:4.1f} dB", (30, ty + 100), cv2.FONT_HERSHEY_SIMPLEX, 0.42, text_val, 1)
 
-        # Disturbance Indicators (Bottom Right)
+        # Disturbance & Theme Buttons (Bottom Right)
         dy = 570
-        def flag_col(active): return (0, 230, 115) if active else (70, 75, 85)
+        def draw_btn(x1, x2, label, active):
+            c_bg = btn_on_bg if active else btn_off_bg
+            c_txt = btn_on_txt if active else btn_off_txt
+            cv2.rectangle(canvas, (x1, dy), (x2, dy + 25), c_bg, -1)
+            cv2.rectangle(canvas, (x1, dy), (x2, dy + 25), border_viewport, 1)
+            cv2.putText(canvas, label, (x1 + 6, dy + 17), cv2.FONT_HERSHEY_SIMPLEX, 0.35, c_txt, 1)
         
-        cv2.rectangle(canvas, (430, dy), (570, dy + 25), flag_col(self.optics.enable_salt_and_pepper), -1)
-        cv2.putText(canvas, "[1] 10% S&P NOISE", (435, dy + 17), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0, 0, 0) if self.optics.enable_salt_and_pepper else (160, 160, 160), 1)
+        draw_btn(430, 545, "[1] 10% S&P", self.optics.enable_salt_and_pepper)
+        draw_btn(555, 675, "[2] POISSON", self.optics.enable_poisson)
+        draw_btn(685, 795, "[3] FOG/HAZE", self.optics.enable_fog)
+        draw_btn(805, 935, "[4] JITTER", self.optics.enable_jitter)
+        draw_btn(945, 1070, "[L] LIGHT HUD" if self.light_mode else "[L] DARK HUD", self.light_mode)
 
-        cv2.rectangle(canvas, (585, dy), (730, dy + 25), flag_col(self.optics.enable_poisson), -1)
-        cv2.putText(canvas, "[2] POISSON NOISE", (590, dy + 17), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0, 0, 0) if self.optics.enable_poisson else (160, 160, 160), 1)
-
-        cv2.rectangle(canvas, (745, dy), (890, dy + 25), flag_col(self.optics.enable_fog), -1)
-        cv2.putText(canvas, "[3] FOG / HAZE", (755, dy + 17), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0, 0, 0) if self.optics.enable_fog else (160, 160, 160), 1)
-
-        cv2.rectangle(canvas, (905, dy), (1055, dy + 25), flag_col(self.optics.enable_jitter), -1)
-        cv2.putText(canvas, "[4] JITTER (+-20px)", (915, dy + 17), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0, 0, 0) if self.optics.enable_jitter else (160, 160, 160), 1)
-
-        cv2.putText(canvas, "Press [T] to switch trajectory | [R] reset camera | [Q] quit & save report", (430, 615),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.40, (140, 150, 165), 1)
+        cv2.putText(canvas, "Press [T] trajectory | [R] reset | [L] theme | [Q] quit & save report", (430, 615),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.40, text_label, 1)
 
         return canvas
 
@@ -372,6 +420,7 @@ class PhoenixXSimulator:
 def main():
     parser = argparse.ArgumentParser(description="Phoenix-X FSOC Virtual Camera Tracker (SIH 26169)")
     parser.add_argument("--headless", action="store_true", help="Run without GUI window for automated testing")
+    parser.add_argument("--light-mode", action="store_true", help="Launch with high-contrast light theme HUD")
     parser.add_argument("--duration", type=float, default=None, help="Run simulation for specific duration in seconds")
     parser.add_argument("--video", type=str, default=None, help="Path to external .mp4 video file (ISRO Benchmark-2 mode)")
     parser.add_argument("--select-roi", action="store_true", help="Click and drag to select any arbitrary object to track in video")
@@ -389,7 +438,7 @@ def main():
         runner.run()
     else:
         # Launch Closed-Loop Interactive Simulator
-        sim = PhoenixXSimulator(headless=args.headless)
+        sim = PhoenixXSimulator(headless=args.headless, light_mode=args.light_mode)
         sim.run(max_seconds=args.duration)
 
 if __name__ == "__main__":

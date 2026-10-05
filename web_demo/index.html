@@ -13,6 +13,21 @@
     .hud-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; }
     .glow-green { box-shadow: 0 0 10px rgba(46, 160, 67, 0.4); }
     .glow-orange { box-shadow: 0 0 10px rgba(210, 153, 34, 0.4); }
+
+    /* Light theme overrides */
+    body.light-theme { background-color: #f1f5f9; color: #0f172a; }
+    body.light-theme .hud-card { background: #ffffff; border-color: #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    body.light-theme .text-white { color: #0f172a !important; }
+    body.light-theme .text-gray-400 { color: #475569 !important; }
+    body.light-theme .text-gray-500 { color: #64748b !important; }
+    body.light-theme .bg-black { background-color: #f8fafc !important; }
+    body.light-theme .bg-\[\#0a0d12\] { background-color: #e2e8f0 !important; }
+    body.light-theme .border-gray-800, body.light-theme .border-gray-700 { border-color: #cbd5e1 !important; }
+    body.light-theme .bg-gray-800 { background-color: #e2e8f0 !important; color: #1e293b !important; }
+    body.light-theme .bg-gray-900 { background-color: #f8fafc !important; color: #1e293b !important; }
+    body.light-theme .bg-sky-950 { background-color: #e0f2fe !important; color: #0369a1 !important; }
+    body.light-theme .bg-indigo-950 { background-color: #e0e7ff !important; color: #4338ca !important; }
+    body.light-theme .bg-emerald-950 { background-color: #d1fae5 !important; color: #047857 !important; }
   </style>
 </head>
 <body class="p-4 select-none">
@@ -25,13 +40,16 @@
       </div>
       <p class="text-xs text-gray-400 mt-1">Autonomous Software-in-the-Loop Edge-AI Coarse Alignment Simulator for Mobile Free Space Optical Communication</p>
     </div>
-    <div class="flex items-center gap-4">
+    <div class="flex items-center gap-3">
       <div class="text-right">
         <div class="text-xs text-gray-400">TEAM PHOENIX X (ID: 141943)</div>
         <div class="text-xs font-semibold text-emerald-400" id="sla-badge">ISRO SLA: &le; 10.0 px (PASSED)</div>
       </div>
+      <button id="btn-theme-toggle" onclick="toggleTheme()" class="px-3 py-1.5 text-xs font-bold rounded bg-gray-800 text-amber-400 border border-gray-700 hover:bg-gray-700 transition flex items-center gap-1.5" title="Toggle Light / Dark Mode (Hotkey: L)">
+        <span id="theme-icon">☀️</span> <span id="theme-text">Light Mode</span>
+      </button>
       <a href="unified.html" class="px-3 py-1.5 text-xs font-bold rounded bg-sky-950 text-sky-300 border border-sky-800 hover:bg-sky-900 transition flex items-center gap-1.5">
-        <span>🎛️</span> Master Unified Cockpit
+        <span>🎛️</span> Master Cockpit
       </a>
       <a href="threejs_visualizer.html" class="px-3 py-1.5 text-xs font-bold rounded bg-indigo-950 text-indigo-300 border border-indigo-800 hover:bg-indigo-900 transition flex items-center gap-1.5">
         <span>🌐</span> 3D WebGL Orbit
@@ -552,6 +570,43 @@
       a.download = `isro_audit_${Date.now()}.csv`;
       a.click();
     };
+
+    // --- Theme Management ---
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle('light-theme');
+      localStorage.setItem('phoenix_theme', isLight ? 'light' : 'dark');
+      updateThemeUI(isLight);
+    }
+
+    function updateThemeUI(isLight) {
+      const icon = document.getElementById('theme-icon');
+      const text = document.getElementById('theme-text');
+      const btn = document.getElementById('btn-theme-toggle');
+      if (icon && text) {
+        if (isLight) {
+          icon.textContent = '🌙';
+          text.textContent = 'Dark Mode';
+          if (btn) btn.className = 'px-3 py-1.5 text-xs font-bold rounded bg-slate-200 text-slate-800 border border-slate-300 hover:bg-slate-300 transition flex items-center gap-1.5';
+        } else {
+          icon.textContent = '☀️';
+          text.textContent = 'Light Mode';
+          if (btn) btn.className = 'px-3 py-1.5 text-xs font-bold rounded bg-gray-800 text-amber-400 border border-gray-700 hover:bg-gray-700 transition flex items-center gap-1.5';
+        }
+      }
+    }
+
+    const savedTheme = localStorage.getItem('phoenix_theme');
+    if (savedTheme === 'light' || (!savedTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+      document.body.classList.add('light-theme');
+      updateThemeUI(true);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.key === 'l' || e.key === 'L' || e.key === 't' || e.key === 'T') {
+        toggleTheme();
+      }
+    });
 
     // Start Simulation Loop
     requestAnimationFrame(step);

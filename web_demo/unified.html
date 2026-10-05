@@ -18,6 +18,91 @@
     ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #334155; }
     .sparkline-canvas { width: 100%; height: 42px; display: block; }
+
+    /* Light theme overrides */
+    body.light-theme {
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+    body.light-theme .glass-card {
+      background: #ffffff;
+      border-color: #cbd5e1;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    }
+    body.light-theme .glass-card-glow {
+      background: #ffffff;
+      border-color: #0284c7;
+      box-shadow: 0 0 15px rgba(2, 132, 199, 0.15);
+    }
+    body.light-theme .feed-container {
+      background: #e2e8f0;
+      border-color: #cbd5e1;
+    }
+    body.light-theme .term-window {
+      background: #f8fafc;
+      color: #1e293b;
+      border-color: #cbd5e1;
+    }
+    body.light-theme .text-white {
+      color: #0f172a !important;
+    }
+    body.light-theme .text-gray-300 {
+      color: #334155 !important;
+    }
+    body.light-theme .text-gray-400 {
+      color: #475569 !important;
+    }
+    body.light-theme .text-gray-500 {
+      color: #64748b !important;
+    }
+    body.light-theme .bg-gray-900,
+    body.light-theme .bg-gray-950,
+    body.light-theme .bg-gray-950\/80,
+    body.light-theme .bg-gray-950\/90,
+    body.light-theme .bg-\[\#020408\],
+    body.light-theme .bg-\[\#0a0f18\],
+    body.light-theme .bg-\[\#0d1424\],
+    body.light-theme .bg-\[\#050811\],
+    body.light-theme .bg-\[\#070b12\],
+    body.light-theme .bg-\[\#02050b\] {
+      background-color: #f8fafc !important;
+    }
+    body.light-theme .border-gray-800,
+    body.light-theme .border-gray-700,
+    body.light-theme .border-gray-800\/80 {
+      border-color: #cbd5e1 !important;
+    }
+    body.light-theme .bg-sky-950,
+    body.light-theme .bg-sky-950\/70,
+    body.light-theme .bg-sky-950\/80 {
+      background-color: #e0f2fe !important;
+      color: #0369a1 !important;
+    }
+    body.light-theme .bg-emerald-950,
+    body.light-theme .bg-emerald-950\/70,
+    body.light-theme .bg-emerald-950\/80 {
+      background-color: #d1fae5 !important;
+      color: #047857 !important;
+    }
+    body.light-theme .bg-amber-950,
+    body.light-theme .bg-amber-950\/70 {
+      background-color: #fef3c7 !important;
+      color: #b45309 !important;
+    }
+    body.light-theme .bg-red-950,
+    body.light-theme .bg-red-950\/80 {
+      background-color: #fee2e2 !important;
+      color: #b91c1c !important;
+    }
+    body.light-theme #hotkeys-modal > div {
+      background-color: #ffffff !important;
+    }
+    body.light-theme ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    body.light-theme ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+    }
   </style>
 </head>
 <body class="p-3 select-none flex flex-col min-h-screen">
@@ -55,8 +140,11 @@
       </div>
     </div>
 
-    <!-- View Modes & Emergency Stop -->
+    <!-- View Modes, Theme & Emergency Stop -->
     <div class="flex items-center gap-2">
+      <button id="btn-theme-toggle" onclick="toggleTheme()" class="text-xs px-2.5 py-1.5 rounded-lg font-semibold bg-gray-900 hover:bg-gray-800 text-amber-400 border border-gray-800 hover:border-amber-600 transition flex items-center gap-1.5 shadow-sm" title="Toggle Light / Dark HUD (Hotkey: T or Shift+L)">
+        <span id="theme-icon">☀️</span> <span id="theme-text">Light Mode</span>
+      </button>
       <button onclick="toggleHotkeyModal()" class="text-xs px-2.5 py-1.5 rounded-lg font-semibold bg-gray-900 hover:bg-gray-800 text-sky-400 border border-gray-800 hover:border-sky-700 transition flex items-center gap-1.5 shadow-sm" title="Show keyboard shortcuts reference">
         <span>⌨️</span> Hotkeys
       </button>
@@ -567,7 +655,8 @@
             <div><span class="text-sky-400 font-bold">[K]</span> Steer South (-Vy)</div>
             <div><span class="text-sky-400 font-bold">[J]</span> Steer West (-Vx)</div>
             <div><span class="text-sky-400 font-bold">[L]</span> Steer East (+Vx)</div>
-            <div class="col-span-2"><span class="text-sky-400 font-bold">[Space]</span> High-G Evasive Maneuver Jump</div>
+            <div><span class="text-amber-400 font-bold">[T] / [Shift+L]</span> Toggle Light / Dark Mode</div>
+            <div><span class="text-sky-400 font-bold">[Space]</span> Evasive Maneuver Jump</div>
           </div>
         </div>
       </div>
@@ -589,6 +678,43 @@
   <!-- Client JavaScript Logic & Sparkline Renderer                          -->
   <!-- ===================================================================== -->
   <script>
+    // Theme Management (Light / Dark Mode)
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle('light-theme');
+      localStorage.setItem('phoenix_theme', isLight ? 'light' : 'dark');
+      updateThemeUI(isLight);
+      flashHUD(isLight ? 'LIGHT HUD ACTIVATED' : 'DARK HUD ACTIVATED', isLight ? 'text-amber-600 font-bold' : 'text-sky-300 font-bold');
+      drawSparkline();
+    }
+
+    function updateThemeUI(isLight) {
+      const icon = document.getElementById('theme-icon');
+      const text = document.getElementById('theme-text');
+      const btn = document.getElementById('btn-theme-toggle');
+      if (icon && text) {
+        if (isLight) {
+          icon.textContent = '🌙';
+          text.textContent = 'Dark Mode';
+          if (btn) {
+            btn.className = 'text-xs px-2.5 py-1.5 rounded-lg font-semibold bg-slate-200 hover:bg-slate-300 text-slate-800 border border-slate-300 transition flex items-center gap-1.5 shadow-sm';
+          }
+        } else {
+          icon.textContent = '☀️';
+          text.textContent = 'Light Mode';
+          if (btn) {
+            btn.className = 'text-xs px-2.5 py-1.5 rounded-lg font-semibold bg-gray-900 hover:bg-gray-800 text-amber-400 border border-gray-800 hover:border-amber-600 transition flex items-center gap-1.5 shadow-sm';
+          }
+        }
+      }
+    }
+
+    // Initialize Theme from localStorage or System Preference
+    const savedTheme = localStorage.getItem('phoenix_theme');
+    if (savedTheme === 'light' || (!savedTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+      document.body.classList.add('light-theme');
+      updateThemeUI(true);
+    }
+
     let currentView = 'matrix';
     let lastLogCount = 0;
     let allLogs = [];
@@ -863,6 +989,14 @@
         return;
       }
 
+      // 4. Cockpit Theme Toggle (T or Shift+L)
+      if (key === 't' || (key === 'l' && (e.shiftKey || e.altKey))) {
+        e.preventDefault();
+        triggerButton('btn-theme-toggle');
+        toggleTheme();
+        return;
+      }
+
       // 1. PTZ Gimbal Controls (WASD & Arrow Keys)
       if (key === 'w' || e.key === 'ArrowUp') {
         e.preventDefault();
@@ -965,8 +1099,10 @@
 
       ctx.clearRect(0, 0, w, h);
 
+      const isLight = document.body.classList.contains('light-theme');
+
       // Background grid
-      ctx.strokeStyle = "#172033";
+      ctx.strokeStyle = isLight ? "#cbd5e1" : "#172033";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(0, h/2); ctx.lineTo(w, h/2);
@@ -974,7 +1110,7 @@
 
       // PS 10 px threshold line (dashed green)
       const slaY = h * 0.25; // 10 px mapped near top
-      ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
+      ctx.strokeStyle = isLight ? "rgba(5, 150, 105, 0.7)" : "rgba(16, 185, 129, 0.4)";
       ctx.setLineDash([3, 3]);
       ctx.beginPath();
       ctx.moveTo(0, slaY); ctx.lineTo(w, slaY);
@@ -984,8 +1120,8 @@
       if (errorHistory.length < 2) return;
 
       // Draw Error Curve
-      ctx.strokeStyle = "#38bdf8";
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = isLight ? "#0284c7" : "#38bdf8";
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
       const step = w / (maxHistoryPoints - 1);
       const startX = w - (errorHistory.length - 1) * step;
