@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Phoenix-X: Master Unified Launcher & Multi-Node Orchestrator
+SIH 26169: Master Unified Launcher & Multi-Node Orchestrator
 Problem Statement ID: SIH 26169 (ISRO / SAC)
 AI-Based Virtual Camera Tracking System for Mobile Free Space Optical Communication
 
@@ -55,7 +55,7 @@ import numpy as np
 
 # Generate initial tactical placeholder frame so streams never start blank
 _init_canvas = np.zeros((480, 640, 3), dtype=np.uint8)
-cv2.putText(_init_canvas, "PHOENIX-X OPTICAL TELEMETRY LINK", (130, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 190, 255), 1, cv2.LINE_AA)
+cv2.putText(_init_canvas, "SIH 26169 OPTICAL TELEMETRY LINK", (130, 220), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 190, 255), 1, cv2.LINE_AA)
 cv2.putText(_init_canvas, "CONNECTING TO DISTRIBUTED SENSORS...", (145, 250), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (120, 160, 200), 1, cv2.LINE_AA)
 _, _init_enc = cv2.imencode(".jpg", _init_canvas, [cv2.IMWRITE_JPEG_QUALITY, 55])
 INIT_PLACEHOLDER = _init_enc.tobytes()
@@ -435,7 +435,7 @@ def launch_all(headless: bool = False, open_browser: bool = True, http_port: int
         print("[+] Unified application cleanly stopped.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Phoenix-X Unified Multi-Node Application")
+    parser = argparse.ArgumentParser(description="SIH 26169 Unified Multi-Node Application")
     parser.add_argument("--headless", action="store_true", help="Run nodes without OpenCV desktop windows (pure web mode)")
     parser.add_argument("--no-browser", action="store_true", help="Do not automatically launch web browser")
     parser.add_argument("--port", type=int, default=8080, help="HTTP port for unified web cockpit (default: 8080)")

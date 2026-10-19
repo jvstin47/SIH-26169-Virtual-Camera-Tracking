@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Phoenix-X Master Application Entrypoint
+SIH 26169 Master Application Entrypoint
 Problem Statement ID: SIH 26169 (ISRO / SAC)
 AI-Based Virtual Camera Tracking System for Mobile Free Space Optical Communication (FSOC)
 
@@ -154,7 +154,7 @@ class PhoenixXSimulator:
                     measured_fps, snr_db, trail_points, sim_time
                 )
                 
-                cv2.imshow("Phoenix-X: FSOC Virtual Camera Tracker (SIH 26169)", ui_frame)
+                cv2.imshow("SIH 26169: FSOC Virtual Camera Tracker", ui_frame)
                 key = cv2.waitKey(1) & 0xFF
                 
                 if key == ord('q') or key == 27:  # Q or ESC
@@ -339,7 +339,7 @@ class PhoenixXSimulator:
         # Text Overlays, Headers & Telemetry Cards
         # -------------------------------------------------------------
         # Title Header
-        cv2.putText(canvas, "PHOENIX-X // FSOC VIRTUAL CAMERA TRACKING SYSTEM", (30, 25),
+        cv2.putText(canvas, "SIH 26169 // FSOC VIRTUAL CAMERA TRACKING SYSTEM", (30, 25),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.65, text_title, 2)
         cv2.putText(canvas, "ISRO SAC - PROBLEM STATEMENT 26169", (730, 25),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.48, text_subtitle, 1)

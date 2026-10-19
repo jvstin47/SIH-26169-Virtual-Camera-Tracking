@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Phoenix-X Streamlit Mission Control & Ephemeris Dashboard
+SIH 26169 Streamlit Mission Control & Ephemeris Dashboard
 Problem Statement ID: SIH 26169 (ISRO / SAC)
 
 Usage:
@@ -23,10 +23,10 @@ def run_app():
         print("[!] Streamlit is not installed. To run the Streamlit dashboard, run: pip install streamlit")
         return
 
-    st.set_page_config(page_title="Phoenix-X FSOC Mission Control", layout="wide", page_icon="🛰️")
+    st.set_page_config(page_title="SIH 26169 FSOC Mission Control", layout="wide", page_icon="🛰️")
 
-    st.title("🛰️ Phoenix-X: AI-Based Virtual Camera Tracking System")
-    st.caption("ISRO / Space Applications Centre | Problem Statement ID: SIH 26169 | Team: Phoenix X (141943)")
+    st.title("🛰️ SIH 26169: AI-Based Virtual Camera Tracking System")
+    st.caption("ISRO / Space Applications Centre | Problem Statement ID: SIH 26169 | Team ID: 141943")
 
     st.sidebar.header("Mission Configuration")
     scenario = st.sidebar.selectbox("Tracking Scenario", ["LEO Satellite Overpass (550 km)", "Airborne UAV to Ground Terminal", "Inter-Satellite Crosslink (OISL)"])

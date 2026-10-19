@@ -1,4 +1,4 @@
-# Phoenix-X: AI-Based Virtual Camera Tracking System
+# SIH 26169: AI-Based Virtual Camera Tracking System
 ### Coarse Alignment of Mobile Free Space Optical Communication (FSOC) Terminals
 
 [![Smart India Hackathon 2026](https://img.shields.io/badge/SIH%202026-Problem%20ID%2026169-blue.svg)](https://sih.gov.in)
@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python Version](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/)
 [![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows%20%7C%20Linux-lightgrey.svg)]()
-[![Build & Release](https://github.com/jvstin47/Phoenix-X-AI-Based-Virtual-Camera-Tracking-System-SIH26169/actions/workflows/build_binaries.yml/badge.svg)](https://github.com/jvstin47/Phoenix-X-AI-Based-Virtual-Camera-Tracking-System-SIH26169/actions)
+[![Build & Release](https://github.com/jvstin47/SIH-26169-Virtual-Camera-Tracking/actions/workflows/build_binaries.yml/badge.svg)](https://github.com/jvstin47/SIH-26169-Virtual-Camera-Tracking/actions)
 [![Unit Tests](https://img.shields.io/badge/Unit%20Tests-20%2F20%20Passing-brightgreen.svg)]()
 
 ---
@@ -18,7 +18,7 @@ Free Space Optical Communication (FSOC) provides high-bandwidth, tap-proof commu
 1. **Coarse Tracking & Acquisition (Scope of Problem Statement 26169)**: A wide-angle camera sensor on a motorized Pan-Tilt-Zoom (PTZ) gimbal detects the remote beacon, compensates for platform kinematics, and stabilizes the optical axis within $\le 10$ pixels of boresight.
 2. **Fine Pointing & Stabilization (Downstream Handover)**: Fast Steering Mirrors (FSMs) and Quadrant Photodiodes (QPDs) take over at kilohertz rates for sub-microradian optical link transmission.
 
-**Phoenix-X** is an applied research Software-in-the-Loop (SIL) tracking simulator, empirical benchmark engine, and standalone application engineered specifically for the coarse alignment stage of mobile FSOC terminals.
+This repository provides an applied research Software-in-the-Loop (SIL) tracking simulator, empirical benchmark engine, and standalone application engineered specifically for the coarse alignment stage of mobile FSOC terminals.
 
 ---
 
@@ -61,7 +61,7 @@ flowchart TD
 
 ## 3. Key Research Innovations
 
-Rather than presenting an unverified black-box model, Phoenix-X is structured around three defensible engineering contributions built on an automated ablation testbed:
+Rather than presenting an unverified black-box model, the system architecture is structured around three defensible engineering contributions built on an automated ablation testbed:
 
 ### Primary Contribution: Uncertainty-Guided Re-acquisition
 * **The Problem**: When cloud obscuration or scintillation fading sever the optical beacon, conventional systems execute fixed spatial rasters or circular spirals that waste scan time searching low-probability regions.
@@ -82,7 +82,7 @@ Rather than presenting an unverified black-box model, Phoenix-X is structured ar
 
 All algorithms were benchmarked across identical 150-frame trials on a single CPU core:
 
-| Scenario / Disturbance | Metric | Baseline 0<br>*(CoG + P-Control)* | Baseline 1<br>*(Median + KF + PI)* | Phoenix-X Proposed<br>*(IWC + Feedforward PID + Spiral)* | Compliance Status (PS $\le 10\ \text{px}$) |
+| Scenario / Disturbance | Metric | Baseline 0<br>*(CoG + P-Control)* | Baseline 1<br>*(Median + KF + PI)* | Proposed System<br>*(IWC + Feedforward PID + Spiral)* | Compliance Status (PS $\le 10\ \text{px}$) |
 |---|---|:---:|:---:|:---:|:---:|
 | **1. Linear (Nominal)** | **RMSE** | 24.67 px | 17.37 px | **11.68 px** | Handover Settling Phase |
 | **2. Circular (Maneuver)** | **RMSE** | 107.54 px | 15.34 px | **8.05 px** | **COMPLIANT (95.0% Lock)** |
@@ -98,8 +98,8 @@ All algorithms were benchmarked across identical 150-frame trials on a single CP
 ## 5. Quickstart & How to Run
 
 ### Option A: 1-Click Standalone Desktop App (No Python Required)
-* **macOS**: Download [`Phoenix-X-macOS.dmg`](https://github.com/jvstin47/Phoenix-X-AI-Based-Virtual-Camera-Tracking-System-SIH26169/releases) (55 MB), open the disk image, and drag `Phoenix-X.app` to your Applications folder. Double-clicking it automatically spins up the multi-node SIL services and opens the Web Cockpit.
-* **Windows**: Download `Phoenix-X-Windows-x64.zip` from [Releases](https://github.com/jvstin47/Phoenix-X-AI-Based-Virtual-Camera-Tracking-System-SIH26169/releases), unzip, and double-click `Phoenix-X.exe`.
+* **macOS**: Download [`SIH26169-macOS.dmg`](https://github.com/jvstin47/SIH-26169-Virtual-Camera-Tracking/releases) (55 MB), open the disk image, and drag the app to your Applications folder. Double-clicking it automatically spins up the multi-node SIL services and opens the Web Cockpit.
+* **Windows**: Download `SIH26169-Windows-x64.zip` from [Releases](https://github.com/jvstin47/SIH-26169-Virtual-Camera-Tracking/releases), unzip, and double-click the executable.
 
 ---
 
@@ -107,8 +107,8 @@ All algorithms were benchmarked across identical 150-frame trials on a single CP
 
 #### 1. Clone & Install Dependencies
 ```bash
-git clone https://github.com/jvstin47/Phoenix-X-AI-Based-Virtual-Camera-Tracking-System-SIH26169.git
-cd Phoenix-X-AI-Based-Virtual-Camera-Tracking-System-SIH26169
+git clone https://github.com/jvstin47/SIH-26169-Virtual-Camera-Tracking.git
+cd SIH-26169-Virtual-Camera-Tracking
 
 # Only two mandatory runtime packages: numpy and opencv-python
 pip install -r requirements.txt
@@ -221,7 +221,7 @@ python3 -m unittest discover tests
 
 ## 7. Verified Academic Literature Foundations
 
-All theoretical models in Phoenix-X are anchored in peer-reviewed literature with verified DOIs:
+All theoretical models in this architecture are anchored in peer-reviewed literature with verified DOIs:
 
 1. **Space Mission PAT Handover**: Liu et al., *"Pointing, Acquisition, and Tracking (PAT) for Optical Satellite Communications: Recent Trends and the ALIGN UK Mission's PAT Mechanism"*, IEEE ICSOS 2025. [DOI: 10.1109/icsos66026.2025.11443125](https://doi.org/10.1109/icsos66026.2025.11443125)
 2. **Mobile FSOC Platform Dynamics**: Sun et al., *"High-Precision Tracking of Free-Space Optical Communication System on Mobile Platforms"*, *Photonics* 2024. [DOI: 10.3390/photonics11100900](https://doi.org/10.3390/photonics11100900)
@@ -232,10 +232,10 @@ All theoretical models in Phoenix-X are anchored in peer-reviewed literature wit
 
 ---
 
-## 8. License & Team Information
+## 8. License & Reference Information
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
 
-* **Team**: Phoenix X (ID: 141943)
+* **Smart India Hackathon Team ID**: 141943
 * **Problem Statement ID**: 26169 (ISRO / Space Applications Centre)
 * **Challenge**: Smart India Hackathon 2026
